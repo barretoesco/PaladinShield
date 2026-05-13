@@ -1,4 +1,4 @@
-# TESTING CLEARSIGN
+# TESTING PaladinShield
 
 ## Evidence Card - Attack Blocked
 
