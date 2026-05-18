@@ -9,9 +9,9 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
-  "author": "",
+  "author": "barretoesco",
   "license": "GPL-3.0-only",
-  "description": "",
+  "description": "PaladinShield - Runtime Enforcement Layer (REL) for infrastructure-grade wallet containment.",
   "dependencies": {
     "@coral-xyz/anchor": "^0.32.1",
     "@solana/web3.js": "^1.98.4",
