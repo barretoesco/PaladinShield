@@ -1,5 +1,5 @@
 {
-  "name": "clearsignai",
+  "name": "PaladinShield",
   "version": "1.0.0",
   "main": "index.js",
   "directories": {
@@ -10,7 +10,7 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "GPL-3.0-only",
   "description": "",
   "dependencies": {
     "@coral-xyz/anchor": "^0.32.1",
