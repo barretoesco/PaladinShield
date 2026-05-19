@@ -27,7 +27,7 @@ Operating as a specialized Promise Proxy, PaladinShield intercepts the global `w
 
 When a dApp calls `signTransaction`, `signAllTransactions`, or `signMessage`, the wrapped call creates a `decisionPromise` and **awaits** it before invoking the original wallet method. Until the extension delivers an explicit **approve** decision, the caller's Promise stays `pending` and the wallet never receives signing bytes.
 
-If the operator closes the verification window without approving, `background.js` dispatches a **block** decision; `inject.js` rejects the gate at the decision handler (`scripts/inject.js`, reject path ~line 267). Popup close maps to *signature rejected* under default-deny policy.
+If the operator closes the verification window without approving, `background.js` dispatches a **block** decision; `scripts/inject.js` rejects the gate at the decision handler (`scripts/inject.js`, reject path ~line 267). Popup close maps to *signature rejected* under default-deny policy.
 
 ### 2. Hybrid Policy Engine & Local Fail-Safe
 
@@ -118,12 +118,12 @@ PaladinShield ships an active **Evidence Hub**, not only a roadmap item:
 
    ```bash
    git clone https://github.com/barretoesco/PaladinShield.git
-   cd paladinshield
+   cd PaladinShield
    ```
 
 2. **(Optional) Enable semantic analysis for local demos**
 
-   Edit `src/extension/scripts/translator.js` and set `DEMO_OPENAI_API_KEY` to your OpenAI key, **or** rely on the built-in fail-safe (`hihg` / `Block`) when no key is set. Do not commit real keys to a public repository.
+   Edit `src/extension/scripts/translator.js` and set `DEMO_OPENAI_API_KEY` to your OpenAI key, **or** rely on the built-in fail-safe (`High` / `Block` fail-safe verdict) when no key is set. Do not commit real keys to a public repository.
 
 3. Open `chrome://extensions/`.
 
