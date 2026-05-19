@@ -13,112 +13,140 @@ PaladinShield is an infrastructure-grade, low-level browser containment layer de
 
 Web3 transaction signing currently operates under an architecture that suffers from extreme human risk. Legacy solutions—including passive simulation layers and visual contract analyzers—rely strictly on *Alert-Driven UX*. They parse payloads asynchronously, display warning highlights or risk scores on-screen, and leave the execution pathway wide open.
 
-Under acute market stress, phishing scenarios, or psychological FOMO, users frequently experience *Alert Fatigue*, override warnings, and finalize compromised transaction promises. If the malicious script host has active access to the injected wallet object, a distracted user results in total capital destruction.  
+Under acute market stress, phishing scenarios, or psychological FOMO, users frequently experience *Alert Fatigue*, override warnings, and finalize compromised transaction promises. If the malicious script host has active access to the injected wallet object, a distracted user results in total capital destruction.
 
 ---
 
 ## ⚡ The Solution: PaladinShield Runtime Enforcement Layer (REL)
 
-PaladinShield moves the defensive perimeter from the visual interface straight into the browser’s JavaScript execution thread, introducing a deterministic barrier on-device.
+PaladinShield moves the defensive perimeter from the visual interface straight into the browser's JavaScript execution thread. The **physical enforcement layer** is a Promise gate on-device; semantic policy informs the operator but does not replace the gate.
 
 ### 1. Default-Deny Asynchronous Promise Gating
-Operating as a specialized Promise Proxy, PaladinShield intercepts the global `window.solana` provider object via an early-stage self-executing script (`inject.js`) evaluated at millisecond zero (`document_start`).  
 
-When a dApp triggers critical provider signing pipelines—specifically `signTransaction`, `signAllTransactions`, or `signMessage`—the execution path is physically trapped. PaladinShield forces the asynchronous sequence to remain in a persistent `pending` state. The native wallet extension is completely decoupled from the runtime; until explicit manual authorization is granted through our secure transaction portal, the promise remains unresolved, preventing any communication down-stream to the signing layer.
+Operating as a specialized Promise Proxy, PaladinShield intercepts the global `window.solana` provider via an early-stage script (`scripts/inject.js`) loaded at `document_start` through the content-script bridge.
+
+When a dApp calls `signTransaction`, `signAllTransactions`, or `signMessage`, the wrapped call creates a `decisionPromise` and **awaits** it before invoking the original wallet method. Until the extension delivers an explicit **approve** decision, the caller's Promise stays `pending` and the wallet never receives signing bytes.
+
+If the operator closes the verification window without approving, `background.js` dispatches a **block** decision; `inject.js` rejects the gate at the decision handler (`scripts/inject.js`, reject path ~line 267). Popup close maps to *signature rejected* under default-deny policy.
+
+### 2. Hybrid Policy Engine & Local Fail-Safe
+
+PaladinShield couples fast client-side checks with optional semantic analysis:
+
+* **Local heuristics (zero network):** `evaluateMessageRisk()` and `evaluateHoneyPotRisk()` in `scripts/translator.js` flag known social-engineering and structural drain patterns before any remote call.
+* **Semantic analysis:** `background.js` forwards captured intents to `translator.js`, which calls OpenAI Chat Completions (`gpt-4o-mini`, JSON mode) per `manifest.json` host permission `https://api.openai.com/*`.
+* **4-second fail-safe:** If the API times out, returns invalid JSON, or no key is configured, the engine yields a **High / Block** verdict (`FAILSAFE_SEMANTIC_VERDICT`). This is *semantic* fail-closed; the signing Promise remains held until the operator blocks, closes the popup, approves explicitly, or hits the inject-layer timeout (90s).
+* **Production note:** Hackathon demos may set `DEMO_OPENAI_API_KEY` in `scripts/translator.js`. Public releases should use a backend proxy (see `SECURITY_ROADMAP.md`)—MV3 unpacked builds do not read a `.env` file automatically.
+
+### 3. signMessage Parity & Session Hardening
+
+Off-chain vectors—blind-signing prompts, SIWE-style messages, and session-phishing text—use the same Promise gate as transaction flows via `wrapSignMessage()` in `scripts/inject.js`.
+
 ---
 
 ## 🛠️ System Architecture & File Registry
 
-The containment engine maps a secure enforcement structure inside the browser via isolated Manifest V3 execution contexts:
+The containment engine runs across isolated Manifest V3 contexts:
 
 ```text
 src/extension/
-├── manifest.json              # Extension manifest (Programmatic scripts, MV3 declaration)
-├── inject.js                  # Page Runtime Layer: Hooks the window provider context at document_start
-├── content_script.js          # Isolated Bridge: Facilitates secure context serialization between page and extension
-├── background.js              # Orchestration Engine: Coordinates state, popup state, and blocks lifecycle routines
-├── forensic-certificate.js    # Cryptographic Engine: Generates on-device SHA-256 evidence footprints
-├── translator.js              # Semantic Processor: Executes multi-vector threat profile queries via LLM API
+├── manifest.json
+├── scripts/
+│   ├── inject.js                 # Page runtime: Promise proxy on window.solana (page world)
+│   ├── content_script.js         # Bridge: inject + relay SIGNATURE_INTENT / decisions
+│   ├── background.js             # Service worker: state, popup, policy orchestration
+│   ├── translator.js             # Heuristics + OpenAI semantic verdict
+│   └── forensic-certificate.js   # SHA-256 Paladin Forensic Hash + certificate text
 └── ui/
-    ├── popup.html / popup.js  # Physical Gate: High-fidelity user verification and transaction authorization portal
-    ├── evidence.html / .js    # Evidence Hub: Verifiable forensic dashboard displaying captured exploit footprints
-    └── popup.css              # Glassmorphism Security Interface UI
+    ├── popup.html / popup.js     # Physical gate: approve / block
+    ├── popup.css
+    ├── evidence.html / evidence.js   # Evidence Hub: hash display + JSON export
+    └── dashboard.html / dashboard.js # Supplementary forensic dashboard
 ```
----
 
-## 🧬 Shipped: Evidence Hub & Cryptographic Forensics (Fase 1 MVP)
-
-Unlike theoretical roadmaps, PaladinShield ships with an active **Evidence Hub** designed to generate immutable proof-of-work documentation for every intercepted threat:
-
-* **On-Device SHA-256 Fingerprinting:** When an exploit vector or malicious instruction schema is caught by the Promise gate, `forensic-certificate.js` compiles the raw transaction parameters, metadata origin (`context.origin`), and DOM state into an unalterable package, passing it through a deterministic SHA-256 calculation to produce a unique `paladinForensicHash`.
-* **Exportable JSON Evidence:** Users and security researchers can access `ui/evidence.html` to review, analyze, and export local forensic JSON reports of the blocked signature vector, turning silent attacks into auditable data streams.
+**Additional docs:** `docs/ATTACK_SIMULATION_REPORT.md` — example hostile `signMessage` drill and block outcome.
 
 ---
 
-## 🚀 Architectural Trajectory (The Roadmap of Force)
+## 🧬 Shipped: Evidence Hub & Cryptographic Forensics (Phase 1 MVP)
 
-### Phase 2 — Decentralized Threat Intelligence Network (The Hive-Mind Update)
-* **Distributed Cache Proximity:** Broadasting the local `paladinForensicHash` to a distributed network cache. Peer nodes hitting the exact same mutated exploit code cross-reference hashes in microseconds, enforcing a hard-block at zero external compute overhead.
-* **Local Inference Integration:** Transitioning the semantic parser from remote API calls to a localized, hardware-accelerated inference sub-routine running directly within the client architecture.
+PaladinShield ships an active **Evidence Hub**, not only a roadmap item:
 
-### Phase 3 — RPC Guard & Embedded Policy SDK
-* **RPC Guard:** A filtered Solana JSON-RPC endpoint layer designed to enforce matching validation semantics directly at the infrastructure node tier.
-* **Embedded Policy SDK:** Packaging the containment engine into a lightweight, modular, wallet-agnostic SDK (`@paladinshield/rel-sdk`) for native integration into leading Solana wallets and institutional dApp runtimes.
-* ---
+* **On-device SHA-256 fingerprinting:** On critical blocks, `forensic-certificate.js` builds a canonical integrity object (`requestId`, `timestamp`, `maliciousPayload`, `semanticAnalysis`, `forensicCertificate`) and computes `paladinForensicHash` via `crypto.subtle.digest` (SHA-256 over sorted JSON).
+* **Captured context:** The payload includes page `origin`, serialized instructions or message bytes, and policy fields—sufficient for audit; it is not a full DOM tree snapshot.
+* **Exportable evidence:** Open `ui/evidence.html` from the extension to review entries and download forensic JSON for third-party verification.
+
+---
+
+## 🚀 Architectural Trajectory (Roadmap)
+
+### Phase 2 — Decentralized Threat Intelligence (Hive-Mind, planned)
+
+* **Distributed cache:** Broadcasting `paladinForensicHash` to a shared threat cache so peers can hard-block matching exploit fingerprints locally (not implemented in Phase 1).
+* **Local inference:** Moving semantic parsing from remote API calls to on-device inference where hardware allows (planned).
+
+### Phase 3 — RPC Guard & Embedded Policy SDK (planned)
+
+* **RPC Guard:** JSON-RPC edge policy aligned with REL semantics.
+* **Embedded Policy SDK:** Wallet-agnostic packaging (`@paladinshield/rel-sdk` — planned) for native wallets and institutional dApp runtimes.
+* **Paladin Verified:** Reputation layer referenced in extension metadata; roadmap only.
+
+---
 
 ## 🎯 Differentiation vs. Competition
 
 | Architectural Feature | Passive Cloud Simulation (Blockaid / Blowfish) | Alert-Driven Visual UX (Pocket Universe / Kerberus) | PaladinShield (Solana REL Core) |
 | :--- | :--- | :--- | :--- |
-| **Execution Tier** | Off-device / Asynchronous Cloud API | In-page Visual Simulation Wrapper | **On-Device / JavaScript Execution Gating** |
-| **Defensive Moat** | Warning banners / Risk scores | Asset-change charts / UI Pop-ups | **Forced Promise Hijacking (`Promise <pending>`)** |
-| **Zero-Day Resilience** | Low (Requires global propagation lag) | Low (Vulnerable to visual/DOM overrides) | **Absolute** (Default-Deny blocks unknown vectors) |
-| **Failsafe State** | Default-Allow (Fails open if API drops) | Default-Allow (Fails open if DOM breaks) | **Default-Deny (Fails closed on timeout/error)** |
-| **Forensic Capture** | Centralized in proprietary databases | None (Volatile runtime alert states) | **Local SHA-256 Verification & Export** |
+| **Execution Tier** | Off-device / asynchronous cloud API | In-page visual simulation wrapper | **On-device JavaScript execution gating** |
+| **Defensive Moat** | Warning banners / risk scores | Asset-change charts / UI pop-ups | **Forced Promise hold (`Promise <pending>`)** |
+| **Zero-Day Resilience** | Low (global propagation lag) | Low (visual/DOM bypass risk) | **High** (pre-sign gate; policy fail-closed; operator must approve to release) |
+| **Failsafe State** | Often default-allow if API drops | Often default-allow if UI breaks | **Semantic default-deny** on API error/timeout; **physical** deny on popup close / block |
+| **Forensic Capture** | Centralized proprietary stores | Typically none at pre-sign boundary | **Local SHA-256 verification & export** |
 
 ---
 
-## 🛠️ Installation & Local Deployment (Unpacked Manifest V3)
-
-Follow these steps to load and test PaladinShield locally in developer mode:
+## 🛠️ Installation & Local Deployment (Unpacked MV3)
 
 ### Prerequisites
-* Google Chrome, Brave, or any Chromium-based browser.
-* Node.js environment installed (for local dependencies).
 
-### Step-by-Step Setup
+* Google Chrome, Brave, or another Chromium-based browser.
+* (Optional) Node.js only if you work on root-level tooling in `package.json`—**not** required to load the unpacked extension.
 
-1. Clone this repository to your local machine:
+### Step-by-step
+
+1. Clone the repository:
+
    ```bash
-   git clone [https://github.com/your-username/paladinshield.git](https://github.com/your-username/paladinshield.git)
-   cd paladinshield ```
+   git clone https://github.com/barretoesco/PaladinShield.git
+   cd paladinshield
+   ```
 
-2. Create a `.env` file inside the `src/extension/` directory to store your credentials:
-   ```bash
-   OPENAI_API_KEY=your_openai_api_key_here ```
-   
-3. Open your browser and navigate to the extensions management console:
-   * URL: `chrome://extensions/`
+2. **(Optional) Enable semantic analysis for local demos**
 
-4. Enable **Developer mode** by toggling the switch in the top-right corner.
+   Edit `src/extension/scripts/translator.js` and set `DEMO_OPENAI_API_KEY` to your OpenAI key, **or** rely on the built-in fail-safe (`hihg` / `Block`) when no key is set. Do not commit real keys to a public repository.
 
-5. Click on the **Load unpacked** (*Cargar descomprimida*) button in the top-left corner.
+3. Open `chrome://extensions/`.
 
-6. Select the `src/extension/` directory from this local repository folder.
+4. Enable **Developer mode** (top-right).
 
-7. **Verification:** The PaladinShield icon will appear in your extension bar. Connect to any Solana dApp on Devnet to test the default-deny promise gating.
----
+5. Click **Load unpacked** and select the **`src/extension/`** folder from this repository.
 
-## ⚖️ Open-Source Licensing & Dual-Model
-
-PaladinShield is committed to securing the Web3 ecosystem as a core Public Good while safeguarding its underlying innovative engineering through a strategic **Dual-Licensing Framework**:
-
-### 1. Open Source Copyleft Tier (GPL-3.0-only)
-The core codebase, client runtime logic (`inject.js`, `content_script.js`), and deterministic promise interceptors hosted in this repository are strictly licensed under the **GNU General Public License v3 (GPL-3.0-only)**. Any distributed derivative work, consumer wallet modification, or open ecosystem fork that integrates this engine **must** remain entirely open-source, publishing its full codebase under the exact same GPL v3 copyleft terms.
-
-### 2. Private Commercial & Enterprise SDK Tier (OEM License)
-For institutional dApps, closed-source consumer applications, sovereign wallet providers, and enterprise DeFi platforms that require the security infrastructure of PaladinShield without exposing their proprietary codebases to copyleft terms, a private **Commercial OEM License** is available. This grants legal access to package the containment engine into closed runtimes, including enterprise support agreements and customized heuristic threshold controls.
+6. **Verification:** The PaladinShield icon appears in the toolbar. Connect a wallet on a Solana dApp (e.g. Devnet faucet), trigger a signing intent, and confirm the popup gate appears before Phantom signs. See `docs/ATTACK_SIMULATION_REPORT.md` for a hostile `signMessage` test pattern.
 
 ---
 
-*Disclaimer: PaladinShield enforces security at the local JavaScript execution boundaries. Spontaneous process termination or persistent pending promises are by-design states implemented to guarantee asset preservation under hostile environment vectors.*
+## ⚖️ Open-Source Licensing & Dual Model
+
+PaladinShield uses a **dual-licensing framework**:
+
+### 1. Open Source Copyleft (GPL-3.0-only)
+
+The core REL runtime (`scripts/inject.js`, `scripts/content_script.js`, promise interceptors, and related enforcement logic) is licensed under **GNU GPL v3.0 only** (`GPL-3.0-only`). See the `LICENSE` file and `package.json` field `name`: `paladinshield-rel`. Distributed derivatives that embed this engine must comply with GPL copyleft.
+
+### 2. Commercial OEM / Enterprise SDK
+
+Closed-source wallets, institutional dApps, and enterprise platforms may obtain a **private commercial license** to integrate the containment engine without triggering copyleft on their proprietary codebases, including support and customized policy thresholds.
+
+---
+
+*Disclaimer: PaladinShield enforces security at local JavaScript signing boundaries. Persistent `pending` promises and aborted flows after explicit deny or popup close are intentional states designed to preserve assets under hostile page conditions.*
