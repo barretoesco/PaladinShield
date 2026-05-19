@@ -30,6 +30,8 @@ When a dApp triggers critical provider signing pipelines—specifically `signTra
 ## 🛠️ System Architecture & File Registry
 
 The containment engine maps a secure enforcement structure inside the browser via isolated Manifest V3 execution contexts:
+
+```text
 src/extension/
 ├── manifest.json              # Extension manifest (Programmatic scripts, MV3 declaration)
 ├── inject.js                  # Page Runtime Layer: Hooks the window provider context at document_start
@@ -38,9 +40,10 @@ src/extension/
 ├── forensic-certificate.js    # Cryptographic Engine: Generates on-device SHA-256 evidence footprints
 ├── translator.js              # Semantic Processor: Executes multi-vector threat profile queries via LLM API
 └── ui/
-├── popup.html / popup.js  # Physical Gate: High-fidelity user verification and transaction authorization portal
-├── evidence.html / .js    # Evidence Hub: Verifiable forensic dashboard displaying captured exploit footprints
-└── popup.css              # Glassmorphism Security Interface UI
+    ├── popup.html / popup.js  # Physical Gate: High-fidelity user verification and transaction authorization portal
+    ├── evidence.html / .js    # Evidence Hub: Verifiable forensic dashboard displaying captured exploit footprints
+    └── popup.css              # Glassmorphism Security Interface UI
+```
 ---
 
 ## 🧬 Shipped: Evidence Hub & Cryptographic Forensics (Fase 1 MVP)
