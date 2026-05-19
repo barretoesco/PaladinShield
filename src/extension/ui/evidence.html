@@ -1,0 +1,421 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PaladinShield REL · Forensic Console</title>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        padding: 20px;
+        background: #05070d;
+        color: #d9f7e5;
+        font-family: "JetBrains Mono", "Fira Code", Consolas, monospace;
+      }
+
+      .banner {
+        border: 1px solid rgba(212, 175, 55, 0.45);
+        background: linear-gradient(135deg, rgba(34, 48, 40, 0.95), rgba(15, 28, 22, 0.9));
+        padding: 14px 16px;
+        border-radius: 12px;
+        margin-bottom: 18px;
+        color: #e8f7ed;
+        font-size: 15px;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+      }
+
+      .banner-sub {
+        display: block;
+        margin-top: 8px;
+        font-size: 12px;
+        font-weight: 400;
+        color: #94c9ab;
+      }
+
+      .terminal {
+        border: 1px solid rgba(128, 242, 192, 0.28);
+        border-radius: 12px;
+        background: #07120d;
+        box-shadow: inset 0 0 0 1px rgba(127, 255, 190, 0.06);
+        overflow: hidden;
+      }
+
+      .terminal-head {
+        padding: 10px 12px;
+        border-bottom: 1px solid rgba(111, 223, 171, 0.26);
+        color: #fff8e7;
+        font-size: 13px;
+        font-weight: 600;
+        background: rgba(18, 51, 39, 0.58);
+      }
+
+      .terminal-body {
+        padding: 12px;
+      }
+
+      .meta {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+        margin-bottom: 12px;
+      }
+
+      .meta-item {
+        border: 1px solid rgba(102, 223, 168, 0.22);
+        border-radius: 8px;
+        padding: 8px;
+        background: rgba(17, 34, 27, 0.6);
+      }
+
+      .meta-key {
+        display: block;
+        color: #7fdab0;
+        font-size: 10px;
+        text-transform: uppercase;
+      }
+
+      .meta-value {
+        margin-top: 4px;
+        color: #d5fce8;
+        font-size: 12px;
+        word-break: break-word;
+      }
+
+      .integrity-panel {
+        border: 1px solid rgba(212, 175, 55, 0.5);
+        border-radius: 10px;
+        padding: 12px 14px;
+        margin-bottom: 14px;
+        background: rgba(40, 32, 14, 0.35);
+      }
+
+      .integrity-panel .label {
+        font-size: 10px;
+        text-transform: uppercase;
+        color: #e8c547;
+        letter-spacing: 0.08em;
+        margin-bottom: 8px;
+      }
+
+      .integrity-panel .interop {
+        margin-top: 12px;
+        padding-top: 10px;
+        border-top: 1px solid rgba(212, 175, 55, 0.28);
+        font-size: 11px;
+        line-height: 1.5;
+        color: #c8e6d4;
+      }
+
+      .integrity-panel .interop strong {
+        color: #ffe9a8;
+      }
+
+      .integrity-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px;
+      }
+
+      #forensic-hash {
+        flex: 1;
+        min-width: 0;
+        font-size: 11px;
+        line-height: 1.4;
+        word-break: break-all;
+        color: #fff4d6;
+      }
+
+      .copy-hash-btn {
+        border: 1px solid rgba(232, 197, 71, 0.55);
+        border-radius: 8px;
+        padding: 8px 12px;
+        background: rgba(60, 48, 12, 0.65);
+        color: #ffe9a3;
+        font-family: inherit;
+        font-size: 11px;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+
+      .copy-hash-btn:hover:not(:disabled) {
+        filter: brightness(1.1);
+      }
+
+      .copy-hash-btn:disabled,
+      .copy-hash-btn[aria-disabled="true"] {
+        opacity: 0.45;
+        pointer-events: none;
+      }
+
+      .forensic-certificate {
+        border: 1px solid rgba(212, 175, 55, 0.35);
+        border-radius: 10px;
+        background: rgba(8, 18, 12, 0.75);
+        padding: 14px;
+        margin-bottom: 12px;
+      }
+
+      .forensic-certificate-title {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        color: #c9a227;
+        margin-bottom: 10px;
+      }
+
+      pre {
+        margin: 0;
+        background: rgba(0, 0, 0, 0.38);
+        border: 1px solid rgba(103, 207, 162, 0.25);
+        border-radius: 8px;
+        padding: 10px;
+        color: #c7ffdf;
+        font-size: 12px;
+        line-height: 1.45;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+
+      .report-list {
+        margin-top: 14px;
+        display: grid;
+        gap: 14px;
+      }
+
+      .forensic-card {
+        border: 1px solid rgba(103, 207, 162, 0.3);
+        border-radius: 10px;
+        padding: 12px;
+        background: rgba(4, 20, 14, 0.55);
+      }
+
+      .forensic-card-head {
+        font-size: 12px;
+        margin-bottom: 8px;
+        color: #a9ffd0;
+      }
+
+      .cert-badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 6px;
+        background: rgba(201, 162, 39, 0.25);
+        color: #ffe08a;
+        margin-right: 6px;
+      }
+
+      .forensic-hash-row {
+        margin-bottom: 8px;
+      }
+
+      .hash-label {
+        display: block;
+        font-size: 10px;
+        text-transform: uppercase;
+        color: #b8a046;
+        margin-bottom: 4px;
+      }
+
+      .hash-value {
+        font-size: 11px;
+        word-break: break-all;
+        color: #f0ead8;
+      }
+
+      .forensic-card .copy-hash-btn {
+        margin-bottom: 10px;
+      }
+
+      .report-item {
+        margin: 0;
+        background: rgba(2, 16, 10, 0.5);
+        border: 1px solid rgba(103, 207, 162, 0.25);
+        border-radius: 8px;
+        padding: 10px;
+        color: #c7ffdf;
+        font-size: 11px;
+        line-height: 1.45;
+        white-space: pre-wrap;
+        word-break: break-word;
+        max-height: 320px;
+        overflow: auto;
+      }
+
+      .report-item-empty {
+        max-height: none;
+        color: #7fb89e;
+      }
+
+      .hint {
+        margin-top: 12px;
+        color: #7fb89e;
+        font-size: 11px;
+      }
+
+      .toolbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 10px;
+        flex-wrap: wrap;
+      }
+
+      .toolbar-actions {
+        display: inline-flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+
+      .reload-btn {
+        border: 1px solid rgba(114, 255, 190, 0.4);
+        border-radius: 8px;
+        padding: 6px 10px;
+        background: rgba(11, 36, 26, 0.6);
+        color: #b5ffd8;
+        font-family: inherit;
+        font-size: 12px;
+        cursor: pointer;
+      }
+
+      .reload-btn:hover {
+        filter: brightness(1.08);
+      }
+
+      .human-link {
+        border: 1px solid rgba(126, 206, 255, 0.45);
+        border-radius: 8px;
+        padding: 6px 10px;
+        background: rgba(9, 31, 45, 0.6);
+        color: #c7ecff;
+        font-family: inherit;
+        font-size: 12px;
+        cursor: pointer;
+        text-decoration: none;
+      }
+
+      .human-link-gold {
+        border-color: rgba(212, 175, 55, 0.55);
+        background: rgba(45, 38, 12, 0.65);
+        color: #ffe9a8;
+      }
+
+      .human-link[aria-disabled="true"] {
+        opacity: 0.45;
+        pointer-events: none;
+      }
+
+      details.tech-details {
+        margin-top: 8px;
+        border: 1px solid rgba(90, 120, 100, 0.45);
+        border-radius: 8px;
+        padding: 8px 10px;
+        background: rgba(0, 0, 0, 0.25);
+      }
+
+      details.tech-details summary {
+        cursor: pointer;
+        color: #8fceac;
+        font-size: 12px;
+      }
+
+      @media (max-width: 820px) {
+        .meta {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="banner">
+      Infrastructure: Runtime Enforcement Layer — Forensic Console
+      <span class="banner-sub"
+        >Evidence Hub anchored at the browser pre-sign boundary: the Paladin Forensic Hash exports field-ready material for interoperability with forensic custodians in the broader ecosystem (e.g. ForenAI, CSDS in the Colosseum corpus). signMessage intent and serialized transactions route through the same default-deny policy.</span
+      >
+    </div>
+
+    <section class="terminal">
+      <div class="terminal-head">REL Forensic Console · Infra evidence & hash interop</div>
+      <div class="terminal-body">
+        <div class="toolbar">
+          <span class="meta-key">Certificate ready for human review</span>
+          <div class="toolbar-actions">
+            <a id="download-forensic-json" class="human-link" href="#" download="paladinshield-forensic.json" aria-disabled="true">
+              Download JSON
+            </a>
+            <a
+              id="download-forensic-txt"
+              class="human-link human-link-gold"
+              href="#"
+              download="paladinshield-certificate.txt"
+              aria-disabled="true"
+            >
+              Download certificate (.txt)
+            </a>
+            <button id="force-reload" class="reload-btn" type="button">Force reload</button>
+          </div>
+        </div>
+        <div class="meta">
+          <div class="meta-item">
+            <span class="meta-key">Report count</span>
+            <span id="report-count" class="meta-value">0</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-key">Request ID</span>
+            <span id="request-id" class="meta-value">-</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-key">Risk / action</span>
+            <span id="risk-action" class="meta-value">-</span>
+          </div>
+        </div>
+
+        <div class="integrity-panel">
+          <div class="label">Paladin Forensic Hash · shareable cryptographic proof</div>
+          <div class="integrity-row">
+            <code id="forensic-hash">—</code>
+            <button id="copy-forensic-hash" type="button" class="copy-hash-btn" aria-disabled="true">Copy Hash</button>
+          </div>
+          <p class="interop">
+            <strong>Interoperability (Colosseum corpus):</strong> this digest seals <code>forensicCertificate</code>
+            plus bound metadata. <strong>ForenAI</strong> (custody / chain-of-custody anchored on Solana·IPFS) and
+            <strong>CSDS</strong> (cyber-incident ingestion and structured analysis with immutable audit posture) ingest
+            institutional evidence: PaladinShield supplies the <em>capture point</em> in the client — portable input for
+            their pipelines, not a substitute for institutional tooling.
+          </p>
+        </div>
+
+        <div class="forensic-certificate">
+          <div class="forensic-certificate-title">Neutralized attack certificate</div>
+          <pre id="forensic-narrative">Loading forensic reports...</pre>
+        </div>
+
+        <details class="tech-details" id="technical-details">
+          <summary>Technical section · [TECHNICAL_PAYLOAD]</summary>
+          <pre id="forensic-technical"></pre>
+        </details>
+
+        <div id="report-list" class="report-list"></div>
+        <p class="hint">
+          Raw records live under <code>PaladinShield_Forensic_Report</code> in <code>chrome.storage.local</code>. The same
+          <strong>Paladin Forensic Hash</strong> renders in the Evidence Hub UI, survives clipboard paste, and is
+          verbatim in the downloadable bundle — disclose it publicly to verifier programs or partner teams operating
+          corpus-grade custody stacks (refer to ForenAI / CSDS-style deployments).
+        </p>
+      </div>
+    </section>
+
+    <script type="module" src="./evidence.js"></script>
+  </body>
+</html>

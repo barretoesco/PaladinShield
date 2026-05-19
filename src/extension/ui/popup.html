@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PaladinShield</title>
+    <link rel="stylesheet" href="./popup.css" />
+  </head>
+  <body class="risk-loading">
+    <div class="ambient"></div>
+    <main class="popup-shell">
+      <header class="header">
+        <h1 class="title">PaladinShield v1.0</h1>
+        <p class="subtitle">Runtime Enforcement Layer (REL) — política en el motor del navegador</p>
+        <div class="shield-badge">REL ACTIVE: Promise Gating / Default-Deny</div>
+        <div id="live-alert-badge" class="live-alert-badge">LIVE ALERT</div>
+        <div id="policy-lock-badge" class="policy-lock-badge">ALERTA BLOQUEADA POR POLITICA</div>
+        <div id="semantic-pulse" class="semantic-pulse">
+          <span id="semantic-led" class="semantic-led"></span>
+          <span id="semantic-pulse-text">POLICY ENGINE: evaluating signature intent (default-deny)…</span>
+        </div>
+        <p class="policy-note">Semantic policy engine — OpenAI gpt-4o-mini (verdict input to REL)</p>
+      </header>
+
+      <section class="glass-card">
+        <div class="traffic-light">
+          <span id="risk-dot" class="risk-dot"></span>
+          <div class="risk-meta">
+            <p class="risk-label">Nivel de riesgo</p>
+            <h2 id="risk-title" class="risk-title">ANALIZANDO</h2>
+          </div>
+        </div>
+
+        <div class="intent-panel">
+          <p class="intent-title">LO QUE QUIEREN HACER</p>
+          <p id="intent-attack" class="intent-text">Escudo Activo: Monitoreando Runtime...</p>
+        </div>
+
+        <div class="defense-panel">
+          <p class="defense-title">LO QUE PALADINSHIELD ESTA HACIENDO</p>
+          <p id="intent-defense" class="defense-text">
+            Navegacion protegida por PaladinShield. Estas a salvo.
+          </p>
+        </div>
+
+        <p id="risk-message" class="risk-message">Recibiendo contexto de firma para evaluación bajo política REL.</p>
+
+        <div class="detail-grid">
+          <div class="detail-item">
+            <span class="detail-key">Veredicto de política</span>
+            <strong id="risk-action" class="detail-value">Esperar</strong>
+          </div>
+          <div class="detail-item">
+            <span class="detail-key">Metodo</span>
+            <strong id="risk-method" class="detail-value">-</strong>
+          </div>
+        </div>
+
+        <div class="button-row">
+          <button id="btn-ack" class="btn btn-primary" type="button">CONFIAR</button>
+          <button id="btn-block" class="btn btn-danger" type="button">BLOQUEAR</button>
+        </div>
+        <a class="evidence-link" href="./evidence.html" target="_blank" rel="noreferrer">Open Forensic Evidence Hub</a>
+      </section>
+    </main>
+
+    <script src="./popup.js"></script>
+  </body>
+</html>
