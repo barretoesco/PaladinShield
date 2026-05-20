@@ -7,6 +7,18 @@
 
 PaladinShield is an infrastructure-grade, low-level browser containment layer designed to secure user intent in Web3. Unlike passive, alert-driven extensions that operate as post-execution advisory tools, PaladinShield enforces security policies directly inside the browser's JavaScript runtime environment **before any signature payload can ever reach the wallet provider interface**.
 
+## For reviewers & judges (start here)
+
+**The evaluated product is the MV3 extension** — fully functional without Node.js, npm, or the SDK.
+
+| Path | Status | Action |
+|------|--------|--------|
+| `src/extension/` | **Shipped — demo here** | Load unpacked in Chrome → see [Installation](#-installation--local-deployment-unpacked-mv3) |
+| `docs/ATTACK_SIMULATION_REPORT.md` | Hostile `signMessage` drill | Reproducible block evidence |
+| `packages/rel-core/` | **Phase 3 roadmap starter (in dev)** | Optional; **not** required for review. Do not expect wallet integration out of the box. |
+
+**Do not run `npm install` at repo root to judge PaladinShield** — root `package.json` is tooling-only. Optional SDK smoke (Node 18+): `node packages/rel-core/examples/smoke.mjs`.
+
 ---
 
 ## 🔬 Core Problem: The Myth of Passive Security
@@ -35,7 +47,7 @@ PaladinShield couples fast client-side checks with optional semantic analysis:
 
 * **Local heuristics (zero network):** `evaluateMessageRisk()` and `evaluateHoneyPotRisk()` in `scripts/translator.js` flag known social-engineering and structural drain patterns before any remote call.
 * **Semantic analysis:** `background.js` forwards captured intents to `translator.js`, which calls OpenAI Chat Completions (`gpt-4o-mini`, JSON mode) per `manifest.json` host permission `https://api.openai.com/*`.
-* **4-second fail-safe:** If the API times out, returns invalid JSON, or no key is configured, the engine yields a **High / Block** verdict (`FAILSAFE_SEMANTIC_VERDICT`). This is *semantic* fail-closed; the signing Promise remains held until the operator blocks, closes the popup, approves explicitly, or hits the inject-layer timeout (90s).
+* **4-second fail-safe:** If the API times out, returns invalid JSON, or no key is configured, the engine applies a **fail-closed** local verdict (honest “semantic engine unavailable” messaging; faucet utility origins may receive `Advertir` instead of hard block). The signing Promise remains held until the operator blocks, closes the popup, approves explicitly, or hits the inject-layer timeout (90s).
 * **Production note:** Hackathon demos may set `DEMO_OPENAI_API_KEY` in `scripts/translator.js`. Public releases should use a backend proxy (see `SECURITY_ROADMAP.md`)—MV3 unpacked builds do not read a `.env` file automatically.
 
 ### 3. signMessage Parity & Session Hardening
