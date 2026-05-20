@@ -1,10 +1,12 @@
 (() => {
   const TX_OUTBOUND_EVENT = "SIGNATURE_INTENT";
   const MESSAGE_OUTBOUND_EVENT = "MESSAGE_SIGNATURE_INTENT";
-  const DECISION_EVENT = "SIGNATURE_DECISION";
   const STATE_KEY = "__clearSignAIContentState";
   const INJECTED_FLAG = "__clearSignAIInjectFileLoaded";
   const DECISION_CHANNEL = "CLEAR_SIGN_AI_SIGNATURE_DECISION";
+  const DECISION_TOKEN_REGISTER_CHANNEL = "CLEAR_SIGN_AI_DECISION_TOKEN_REGISTER";
+  const PAGE_HANDLER_REGISTER = "__paladinShieldRegisterDecisionToken";
+  const PAGE_HANDLER_ACCEPT = "__paladinShieldAcceptDecision";
 
   if (window[STATE_KEY]?.initialized) return;
 
@@ -38,16 +40,31 @@
     relayToExtension(data.type, data.payload);
   });
 
+  function runPageHandler(handlerName, args) {
+    const script = document.createElement("script");
+    script.textContent = `(function(){try{var fn=window[${JSON.stringify(handlerName)}];if(typeof fn==="function"){fn.apply(null,${JSON.stringify(args)});}}catch(e){console.warn("[PaladinShield bridge]",e);}})();`;
+    const target = document.documentElement || document.head || document.body;
+    if (!target) return;
+    target.appendChild(script);
+    script.remove();
+  }
+
   if (chrome.runtime?.onMessage) {
     chrome.runtime.onMessage.addListener((message) => {
-      if (!message || message.type !== DECISION_CHANNEL || !message.payload) return;
-      window.postMessage(
-        {
-          type: DECISION_EVENT,
-          payload: message.payload,
-        },
-        "*"
-      );
+      if (!message?.type || !message.payload) return;
+
+      if (message.type === DECISION_TOKEN_REGISTER_CHANNEL) {
+        const { requestId, decisionToken } = message.payload;
+        if (!requestId || !decisionToken) return;
+        runPageHandler(PAGE_HANDLER_REGISTER, [requestId, decisionToken]);
+        return;
+      }
+
+      if (message.type === DECISION_CHANNEL) {
+        const { requestId, decision, decisionToken, reason } = message.payload;
+        if (!requestId || !decisionToken) return;
+        runPageHandler(PAGE_HANDLER_ACCEPT, [requestId, decision, decisionToken, reason || ""]);
+      }
     });
   }
 

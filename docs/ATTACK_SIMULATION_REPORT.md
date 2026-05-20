@@ -26,6 +26,7 @@ await window.solana.signMessage(encoder.encode(maliciousText), "utf8");
    - The signature Promise remained pending until explicit user decision.
    - High-risk verdict triggered a block path.
    - The Promise was rejected, preventing the signature from reaching the wallet confirmation flow.
+   - **Post-submit (v0.1.1):** critical verdicts auto-block with no CONFIAR override; decision delivery requires a per-request token (see `docs/POST_SUBMIT_SECURITY_HARDENING.md`).
 
 ## Security Outcome
 **Attack blocked successfully.**  

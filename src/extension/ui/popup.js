@@ -43,6 +43,14 @@ function getBodyClassByRisk(risk) {
   return "risk-loading";
 }
 
+function isPolicyHardBlocked(state) {
+  if (state?.enforcementLocked) return true;
+  const analysis = state?.analysisResult || {};
+  const risk = analysis?.riesgo || "";
+  const action = analysis?.accion || "";
+  return risk === "Alto" || action === "Bloquear";
+}
+
 function hasActivePendingRequest(state) {
   if (!state) return false;
   if (typeof state?.pendingApproval === "boolean") return state.pendingApproval;
@@ -70,7 +78,9 @@ function buildSentinelState(state) {
 }
 
 function normalizeUiModel(state) {
-  if (!hasActivePendingRequest(state)) {
+  const hardBlocked = isPolicyHardBlocked(state);
+
+  if (!hasActivePendingRequest(state) && !hardBlocked) {
     return buildSentinelState(state);
   }
 
@@ -92,6 +102,7 @@ function normalizeUiModel(state) {
       method,
       analyzing: false,
       sentinel: false,
+      hardBlocked: true,
     };
   }
 
@@ -114,14 +125,17 @@ function normalizeUiModel(state) {
 
   return {
     risk,
-    title: (risk || "DESCONOCIDO").toUpperCase(),
+    title: hardBlocked ? "BLOQUEADO" : (risk || "DESCONOCIDO").toUpperCase(),
     message: analysis?.mensaje || "Sin veredicto semantico aun.",
     attackIntent: parsedIntents.attackIntent,
-    defenseIntent: parsedIntents.defenseIntent,
+    defenseIntent: hardBlocked
+      ? "REL default-deny: veredicto critico — la Promesa de firma fue rechazada sin override."
+      : parsedIntents.defenseIntent,
     action,
     method,
     analyzing: false,
     sentinel: false,
+    hardBlocked,
   };
 }
 
@@ -176,9 +190,11 @@ function renderState(state) {
   semanticLed.classList.toggle("steady", ui.sentinel && !ui.analyzing);
   buttonRow.style.display = ui.sentinel ? "none" : "flex";
   liveAlertBadge.style.display = ui.sentinel ? "none" : "inline-block";
-  policyLockBadge.style.display = alertLockActive && !ui.sentinel ? "inline-block" : "none";
+  policyLockBadge.style.display =
+    (alertLockActive && !ui.sentinel) || ui.hardBlocked ? "inline-block" : "none";
 
   const hasPendingRequest = hasActivePendingRequest(state);
+  const hardBlocked = isPolicyHardBlocked(state);
   if (hasPendingRequest && pendingRequestStartedAt === 0) {
     pendingRequestStartedAt = Date.now();
   }
@@ -187,9 +203,10 @@ function renderState(state) {
   }
 
   const guardrailActive =
-    hasPendingRequest && Date.now() - pendingRequestStartedAt < EXECUTION_GUARDRAIL_MS;
-  acknowledgeButton.disabled = !hasPendingRequest || guardrailActive;
-  blockButton.disabled = !hasPendingRequest;
+    hasPendingRequest && !hardBlocked && Date.now() - pendingRequestStartedAt < EXECUTION_GUARDRAIL_MS;
+  acknowledgeButton.disabled = !hasPendingRequest || guardrailActive || hardBlocked;
+  acknowledgeButton.textContent = hardBlocked ? "BLOQUEADO POR POLITICA" : "CONFIAR";
+  blockButton.disabled = !hasPendingRequest && !hardBlocked;
 
   if (guardrailActive) {
     const remainingMs = EXECUTION_GUARDRAIL_MS - (Date.now() - pendingRequestStartedAt);

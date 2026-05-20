@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "PaladinShield",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "PaladinShield — Runtime Enforcement Layer (REL) para Solana: cumplimiento en el motor del navegador antes de que exista la firma. Forense verificable, default-deny, signMessage y transacciones bajo la misma política. Roadmap: RPC Guard y Paladin Verified.",
   "permissions": ["storage", "tabs", "windows"],
   "host_permissions": ["<all_urls>", "https://api.openai.com/*"],

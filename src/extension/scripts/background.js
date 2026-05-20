@@ -9,6 +9,7 @@ const THREAT_HISTORY_KEY = "clearsignai:threat-history";
 const FORENSIC_REPORTS_KEY = "clearsignai:forensic-reports";
 const USER_DECISION_CHANNEL = "CLEAR_SIGN_AI_USER_DECISION";
 const DECISION_TO_CONTENT_CHANNEL = "CLEAR_SIGN_AI_SIGNATURE_DECISION";
+const DECISION_TOKEN_REGISTER_CHANNEL = "CLEAR_SIGN_AI_DECISION_TOKEN_REGISTER";
 const GET_CURRENT_STATE_TYPE = "GET_CURRENT_STATE";
 const pendingSignatureRequests = new Map();
 const POPUP_PATH = "ui/popup.html";
@@ -36,6 +37,25 @@ function isCriticalRisk(analysisResult) {
   const risk = analysisResult?.riesgo || "";
   const action = analysisResult?.accion || "";
   return risk === "Alto" || action === "Bloquear";
+}
+
+function createDecisionToken() {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return `dt_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+}
+
+async function registerDecisionTokenOnTab(tabId, requestId, decisionToken) {
+  if (!tabId || !requestId || !decisionToken) return;
+  try {
+    await chrome.tabs.sendMessage(tabId, {
+      type: DECISION_TOKEN_REGISTER_CHANNEL,
+      payload: { requestId, decisionToken },
+    });
+  } catch (error) {
+    console.warn("🛡️ ENFORCEMENT: Could not register decision token on tab.");
+  }
 }
 
 async function persistAnalysisState(state) {
@@ -211,6 +231,7 @@ async function dispatchSignatureDecision(requestId, decision, reason = "") {
   const payload = {
     requestId,
     decision,
+    decisionToken: pending.decisionToken,
     reason,
     timestamp: new Date().toISOString(),
   };
@@ -218,6 +239,9 @@ async function dispatchSignatureDecision(requestId, decision, reason = "") {
   try {
     if (!pending.tabId) {
       throw new Error("Missing sender tabId for decision dispatch.");
+    }
+    if (!pending.decisionToken) {
+      throw new Error("Missing decision token for secure dispatch.");
     }
     await chrome.tabs.sendMessage(pending.tabId, {
       type: DECISION_TO_CONTENT_CHANNEL,
@@ -276,10 +300,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       );
       const requestId = signatureIntent.requestId || crypto.randomUUID();
       signatureIntent.requestId = requestId;
+      const decisionToken = createDecisionToken();
+      const senderTabId = sender?.tab?.id ?? null;
       pendingSignatureRequests.set(requestId, {
-        tabId: sender?.tab?.id ?? null,
+        tabId: senderTabId,
         createdAt: Date.now(),
+        decisionToken,
       });
+      await registerDecisionTokenOnTab(senderTabId, requestId, decisionToken);
 
       const analyzingState = {
         requestId,
@@ -287,7 +315,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         pendingApproval: true,
         intentType: isMessageIntent ? "message_signature" : "transaction_signature",
         receivedAt: new Date().toISOString(),
-        senderTabId: sender?.tab?.id ?? null,
+        senderTabId,
         signatureIntent,
       };
 
@@ -304,9 +332,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       const completedState = {
         ...analyzingState,
         stage: "completed",
-        pendingApproval: true,
+        pendingApproval: !shouldAutoBlock,
         completedAt: new Date().toISOString(),
         analysisResult,
+        enforcementLocked: shouldAutoBlock,
       };
 
       if (shouldAutoBlock) {
@@ -315,19 +344,37 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         completedState.forensicReport = forensicReport;
         console.log("🛡️ PaladinShield: Execution Blocked. Funds Secured.");
         console.log("📁 ENFORCEMENT REPORT:", forensicReport);
+        await dispatchSignatureDecision(
+          requestId,
+          "block",
+          "Politica REL default-deny: veredicto Alto/Bloquear — firma rechazada sin override."
+        );
       }
 
       await persistAnalysisState(completedState);
       await broadcastAnalysisUpdate(completedState);
 
-      sendResponse({ ok: true, requestId, stage: "completed" });
+      sendResponse({ ok: true, requestId, stage: "completed", autoBlocked: shouldAutoBlock });
     })().catch(async (error) => {
       console.warn("🛡️ ENFORCEMENT: Runtime analysis error.");
+      const latest = await readLatestAnalysisState();
+      const failedRequestId = latest?.requestId || latest?.signatureIntent?.requestId;
       const failureState = {
         stage: "failed",
+        pendingApproval: false,
+        enforcementLocked: true,
         failedAt: new Date().toISOString(),
         error: error?.message || String(error),
+        requestId: failedRequestId || null,
       };
+
+      if (failedRequestId && pendingSignatureRequests.has(failedRequestId)) {
+        await dispatchSignatureDecision(
+          failedRequestId,
+          "block",
+          "Politica REL default-deny: fallo de evaluacion — firma rechazada."
+        );
+      }
 
       await persistAnalysisState(failureState);
       await broadcastAnalysisUpdate(failureState);
@@ -354,9 +401,19 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         throw new Error("No existe requestId para aplicar decision del usuario.");
       }
 
+      const sourceAnalysis = message.state?.analysisResult || latest?.analysisResult || null;
+      if (decision === "approve" && isCriticalRisk(sourceAnalysis)) {
+        throw new Error("Politica REL: veredicto Alto/Bloquear no admite override desde CONFIAR.");
+      }
+      if (decision === "approve" && (latest?.enforcementLocked || message.state?.enforcementLocked)) {
+        throw new Error("Politica REL: enforcement bloqueado para esta solicitud.");
+      }
+      if (decision === "approve" && !pendingSignatureRequests.has(requestId)) {
+        throw new Error("La solicitud ya fue resuelta por politica REL.");
+      }
+
       if (decision === "block") {
         const sourceIntent = message.state?.signatureIntent || latest?.signatureIntent || null;
-        const sourceAnalysis = message.state?.analysisResult || latest?.analysisResult || null;
         if (sourceIntent && !sourceIntent.requestId) {
           sourceIntent.requestId = requestId;
         }

@@ -3,8 +3,9 @@
   const PROVIDER_FLAG = "__clearSignAIProviderWrapped";
   const TX_OUTBOUND_EVENT = "SIGNATURE_INTENT";
   const MESSAGE_OUTBOUND_EVENT = "MESSAGE_SIGNATURE_INTENT";
-  const INBOUND_DECISION_EVENT = "SIGNATURE_DECISION";
   const HOLD_MS = 180;
+  const DECISION_HANDLER_REGISTER = "__paladinShieldRegisterDecisionToken";
+  const DECISION_HANDLER_ACCEPT = "__paladinShieldAcceptDecision";
   const DECISION_TIMEOUT_MS = 90_000;
   const pendingDecisions = new Map();
 
@@ -235,6 +236,7 @@
       }, DECISION_TIMEOUT_MS);
 
       pendingDecisions.set(requestId, {
+        decisionToken: null,
         resolve: (decisionPayload) => {
           clearTimeout(timeoutId);
           pendingDecisions.delete(requestId);
@@ -249,23 +251,33 @@
     });
   }
 
-  window.addEventListener("message", (event) => {
-    if (event.source !== window) return;
-    const data = event.data;
-    if (!data || data.type !== INBOUND_DECISION_EVENT || !data.payload?.requestId) return;
+  function registerDecisionToken(requestId, decisionToken) {
+    const pending = pendingDecisions.get(requestId);
+    if (!pending || typeof decisionToken !== "string" || !decisionToken) return;
+    pending.decisionToken = decisionToken;
+  }
 
-    const requestId = data.payload.requestId;
+  function acceptDecision(requestId, decision, decisionToken, reason = "") {
     const pending = pendingDecisions.get(requestId);
     if (!pending) return;
 
-    if (data.payload.decision === "approve") {
-      pending.resolve(data.payload);
+    if (!pending.decisionToken || pending.decisionToken !== decisionToken) {
+      console.warn(
+        "[PaladinShield inject] Decision rejected: missing or invalid decision token (postMessage spoof blocked)."
+      );
       return;
     }
 
-    const reason = data.payload.reason || "Operacion bloqueada por PaladinShield.";
-    pending.reject(new Error(reason));
-  });
+    if (decision === "approve") {
+      pending.resolve({ requestId, decision, reason, timestamp: new Date().toISOString() });
+      return;
+    }
+
+    pending.reject(new Error(reason || "Operacion bloqueada por PaladinShield."));
+  }
+
+  window[DECISION_HANDLER_REGISTER] = registerDecisionToken;
+  window[DECISION_HANDLER_ACCEPT] = acceptDecision;
 
   function wrapMethod(provider, methodName) {
     const original = provider?.[methodName];
