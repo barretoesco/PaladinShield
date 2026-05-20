@@ -85,10 +85,10 @@ PaladinShield ships an active **Evidence Hub**, not only a roadmap item:
 * **Distributed cache:** Broadcasting `paladinForensicHash` to a shared threat cache so peers can hard-block matching exploit fingerprints locally (not implemented in Phase 1).
 * **Local inference:** Moving semantic parsing from remote API calls to on-device inference where hardware allows (planned).
 
-### Phase 3 — RPC Guard & Embedded Policy SDK (started)
+### Phase 3 — RPC Guard & Embedded Policy SDK (in development)
 
-* **RPC Guard:** JSON-RPC edge policy aligned with REL semantics (planned).
-* **Embedded Policy SDK:** Wallet-embeddable package **`@paladinshield/rel-core`** — local heuristics, `evaluateIntent()`, `wrapSolanaProvider()`, forensic hash utilities. See `docs/WALLET_SDK_INTEGRATION.md` and `packages/rel-core/`.
+* **RPC Guard:** JSON-RPC edge policy aligned with REL semantics (**planned** — not shipped).
+* **Embedded Policy SDK (`@paladinshield/rel-core`):** **Roadmap / early starter only.** Reference types, local heuristics, Promise-gate primitives, and forensic hash helpers extracted from the MV3 REL — **not a production wallet integration yet.** The **functional product today** is the extension (`src/extension/`). SDK spec and smoke example: `docs/WALLET_SDK_INTEGRATION.md` · `packages/rel-core/`.
 * **Paladin Verified:** Reputation layer referenced in extension metadata; roadmap only.
 
 ---

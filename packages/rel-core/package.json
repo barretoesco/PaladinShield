@@ -1,7 +1,7 @@
 {
   "name": "@paladinshield/rel-core",
   "version": "0.1.0",
-  "description": "PaladinShield Runtime Enforcement Layer — wallet-embeddable policy types, local heuristics, Promise gate, and forensic hash utilities.",
+  "description": "PaladinShield REL — Phase 3 roadmap starter (in development): policy types, local heuristics, Promise gate, forensic hash utilities. Not production-ready; see docs/WALLET_SDK_INTEGRATION.md.",
   "type": "module",
   "main": "./src/index.js",
   "exports": {

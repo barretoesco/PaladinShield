@@ -1,6 +1,9 @@
 # PaladinShield Wallet SDK Integration (`@paladinshield/rel-core`)
 
-Phase 3 starter package for **wallet-native** Runtime Enforcement Layer (REL). The MV3 extension remains the public demo; this SDK exposes the same contracts for embeddable Promise gating.
+> **Status: in development (Phase 3 roadmap).**  
+> This package is an **early reference starter** — API surface and contracts aligned with the MV3 extension, plus a Node smoke example. It is **not** a finished wallet SDK and is **not** required to run or judge the hackathon demo. **Shipped and functional today:** the MV3 extension in `src/extension/`.
+
+Phase 3 target: **wallet-native** Runtime Enforcement Layer (REL). The extension remains the public demo vehicle; `@paladinshield/rel-core` documents where the same enforcement logic is heading for embeddable Promise gating.
 
 **Audience:** Solana wallet teams, browser wallet shells, institutional signing surfaces — not consumer dApp developers (users inherit protection via wallet, not per-app integration).
 
@@ -75,13 +78,16 @@ Same JSON shape as the MV3 extension semantic engine (`translator.js`).
 
 ## Scope honesty
 
-`@paladinshield/rel-core` v0.1.0 ships:
+`@paladinshield/rel-core` v0.1.0 is **roadmap scaffolding**, not a release candidate:
 
-- Local heuristics (`signMessage` phishing patterns, honey-pot structural checks)
-- Promise gate primitives
-- Forensic hash utilities
+| Shipped in starter | Not shipped (roadmap) |
+|--------------------|---------------------|
+| Local heuristics (`signMessage` patterns, honey-pot checks) | OpenAI / remote policy client |
+| Promise gate primitives (`createRelGate`, `wrapSolanaProvider`) | MV3 bridge, popup UX, decision tokens |
+| Forensic hash helpers | Full certificate narrative (`forensic-certificate.js` parity) |
+| Smoke example (`examples/smoke.mjs`) | npm publish, wallet partner integration, RPC Guard |
 
-It does **not** ship: OpenAI client, MV3 bridge, RPC Guard, or full certificate narrative formatting (see extension `forensic-certificate.js` for production-grade exports).
+We only document this folder to show **direction and API intent** post-hackathon — same policy contract as `translator.js`, embeddable beyond the browser extension.
 
 ## Related
 
