@@ -3,30 +3,9 @@
 /** @typedef {import('./types.js').PolicyVerdict} PolicyVerdict */
 
 import { isCriticalVerdict } from "./policy.js";
+import { normalizeSigningIntent } from "./intent.js";
 
 const WRAP_FLAG = "__paladinRelCoreWrapped";
-
-function createRequestId() {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-    return crypto.randomUUID();
-  }
-  return `req_${Date.now()}_${Math.random().toString(16).slice(2)}`;
-}
-
-function decodeMessageBytes(messageInput) {
-  try {
-    const bytes =
-      messageInput instanceof Uint8Array
-        ? messageInput
-        : Array.isArray(messageInput)
-          ? Uint8Array.from(messageInput)
-          : new Uint8Array(0);
-    if (!bytes.length) return "";
-    return new TextDecoder("utf-8", { fatal: false }).decode(bytes).replace(/\0/g, "").trim();
-  } catch (_) {
-    return "";
-  }
-}
 
 /**
  * Promise gate: evaluate policy, optional user decision, then call original signer.
@@ -44,25 +23,23 @@ export function createRelGate(options) {
   const hardBlockOnCritical = options.hardBlockOnCritical !== false;
 
   return async function runRelGate(method, args, originalFn, origin = "unknown") {
-    const requestId = createRequestId();
-    /** @type {SignatureIntent} */
-    const intent = {
-      requestId,
+    const mode =
+      typeof options.resolveMode === "function"
+        ? options.resolveMode()
+        : (options.mode ?? "enforce");
+    const intent = normalizeSigningIntent({
       method,
+      args,
       origin,
-      timestamp: new Date().toISOString(),
-    };
-
-    if (method === "signMessage") {
-      intent.action = "message_signature_intent_detected";
-      intent.messageText = decodeMessageBytes(args[0]);
-      intent.analysisInput = { method, messageText: intent.messageText };
-    } else {
-      intent.action = "signature_intent_detected";
-      intent.transactions = Array.isArray(args[0]) ? args : [args[0]].filter(Boolean);
-    }
+      source: "paladinshield-rel",
+    });
 
     const verdict = await options.evaluateIntent(intent);
+
+    if (mode === "shadow") {
+      options.onShadowVerdict?.(intent, verdict);
+      return originalFn.apply(null, args);
+    }
 
     if (hardBlockOnCritical && isCriticalVerdict(verdict)) {
       options.onBlocked?.(intent, verdict);
@@ -72,7 +49,7 @@ export function createRelGate(options) {
     /** @type {ReturnType<typeof setTimeout>|undefined} */
     let decisionTimeoutId;
     const decision = await Promise.race([
-      options.requestUserDecision({ intent, verdict, requestId }),
+      options.requestUserDecision({ intent, verdict, requestId: intent.requestId || "" }),
       new Promise((_, reject) => {
         decisionTimeoutId = setTimeout(
           () => reject(new Error("PaladinShield REL: decision timeout.")),

@@ -72,7 +72,7 @@
   window[INJECTED_FLAG] = true;
 
   const script = document.createElement("script");
-  script.type = "text/javascript";
+  script.type = "module";
   script.src = chrome.runtime.getURL("scripts/inject.js");
   script.async = false;
   script.dataset.clearsign = "inject";

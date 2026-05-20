@@ -41,7 +41,7 @@ REL operates **above** the wallet signer interface, not inside the wallet binary
 | Faucet false positives (utility origins) | `policy-heuristics.js` utility path | ✅ | ✅ shared module |
 | Honey-pot style tx patterns (heuristic) | Local structural checks | ✅ | ✅ |
 | Audit trail for blocks | SHA-256 forensic hash + export | ✅ Evidence Hub | ✅ hash helpers |
-| Spoofed approve via page `postMessage` | Decision tokens + isolated delivery (extension) | ✅ v0.1.3+ | ❌ host must implement equivalent |
+| Spoofed approve via page `postMessage` | Decision tokens + isolated delivery | ✅ v0.1.3+ | ✅ reference helpers (`createDecisionToken`, registry) — host wires UI |
 | Bypass via `signAndSendTransaction` | All standard wallet sign entry points wrapped | ✅ v0.1.4+ | ✅ v0.2.0+ |
 
 ---
@@ -96,8 +96,8 @@ REL operates **above** the wallet signer interface, not inside the wallet binary
 |---------|-----------|-----|
 | Physical signing intercept | `inject.js` on `window.solana` | Wallet embeds `wrapSolanaProvider` |
 | Operator UI | Popup | Wallet team |
-| Decision anti-spoof | `background.js` tokens | Wallet team |
-| Semantic policy | `translator.js` + OpenAI | Optional `policyEngine` hook |
+| Decision anti-spoof | `background.js` tokens + page handlers | Reference registry in `@paladinshield/rel-core` |
+| Semantic policy | `translator.js` + OpenAI | Optional `policyEngine` hook + `@paladinshield/rel-policy` stub |
 | Evidence export UI | `evidence.html` | Wallet or backend |
 
 ---

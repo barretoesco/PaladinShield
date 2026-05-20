@@ -18,10 +18,10 @@ From repository root:
 ```bash
 npm test
 node packages/rel-core/examples/wallet-shell.mjs
-node packages/rel-core/examples/smoke.mjs
+node packages/rel-core/examples/wallet-with-tokens.mjs
 ```
 
-Browser demo (static server): `npx serve packages/rel-core/examples -p 3456` → `/browser-demo.html`
+Browser demo (from repo root): `npm run demo:browser` then open `http://localhost:3456/`
 
 ## Documentation
 

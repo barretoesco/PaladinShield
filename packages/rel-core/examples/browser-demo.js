@@ -1,16 +1,38 @@
 /**
- * Browser REL demo — same three scenarios as wallet-shell.mjs, UI in-page.
- * Serve: npx serve packages/rel-core/examples -p 3456 → browser-demo.html
+ * Browser REL demo — scenarios A–D (aligned with wallet-shell.mjs).
+ * Serve from repo root: npx serve . -p 3456
+ * Open: /packages/rel-core/examples/browser-demo.html
  */
-import { createRelGate, evaluateIntent } from "../src/index.js";
+import { createRelGate, evaluateIntent, buildForensicReport } from "../src/index.js";
 
-const logEl = document.getElementById("log");
-const runBtn = document.getElementById("run-demo");
+const MEMO_PROGRAM_ID = "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr";
+
+/** @type {HTMLPreElement|null} */
+let logEl = null;
+/** @type {HTMLButtonElement|null} */
+let runBtn = null;
 
 /** @param {string} line */
 function log(line) {
+  if (!logEl) return;
   logEl.textContent += `${line}\n`;
   logEl.scrollTop = logEl.scrollHeight;
+}
+
+/**
+ * @param {{ logEl: HTMLPreElement, runBtn: HTMLButtonElement }} ui
+ */
+export function initBrowserDemo(ui) {
+  logEl = ui.logEl;
+  runBtn = ui.runBtn;
+  runBtn.addEventListener("click", () => {
+    runBtn.disabled = true;
+    runDemo()
+      .catch((err) => log(`Fatal: ${err.message}`))
+      .finally(() => {
+        runBtn.disabled = false;
+      });
+  });
 }
 
 function createMockProvider() {
@@ -20,6 +42,9 @@ function createMockProvider() {
     },
     async signTransaction(tx) {
       return { signed: true, payload: tx };
+    },
+    async signAndSendTransaction(tx) {
+      return { signed: true, signature: "mock-signature" };
     },
   };
 }
@@ -45,16 +70,31 @@ function attachGate(provider, config) {
 
   bindGate("signMessage");
   bindGate("signTransaction");
+  bindGate("signAndSendTransaction");
 
   return provider;
 }
 
+function buildHostileSignAndSendTx() {
+  const auditText = "AUDIT_TEST_MALICIOUS_SIGN_AND_SEND";
+  return {
+    metadata: { audit: auditText },
+    instructions: [
+      {
+        programId: MEMO_PROGRAM_ID,
+        data: new Uint8Array([...new TextEncoder().encode(auditText)]),
+        keys: [],
+      },
+    ],
+  };
+}
+
 async function runDemo() {
+  if (!logEl) return;
   logEl.textContent = "";
   log("PaladinShield REL — browser demo (Phase 3 SDK)\n");
 
-  // A — hostile
-  log("--- Escenario A (Hostil) ---");
+  log("--- Escenario A (Hostil signMessage) ---");
   const hostile = attachGate(createMockProvider(), {
     origin: "https://drainer-domain.evil",
     decision: "approve",
@@ -68,8 +108,7 @@ async function runDemo() {
     log(`[A] HARD-BLOCK (sin UI) — ${e.message.slice(0, 80)}…`);
   }
 
-  // B — benign
-  log("\n--- Escenario B (Benigno) ---");
+  log("\n--- Escenario B (Benigno faucet) ---");
   const benign = attachGate(createMockProvider(), {
     origin: "https://spl-token-faucet.com",
     decision: "approve",
@@ -80,7 +119,6 @@ async function runDemo() {
   const signed = await benign.signTransaction(tx);
   log(`[B] FIRMA AUTORIZADA — ${JSON.stringify(signed)}`);
 
-  // C — medium, operator block
   log("\n--- Escenario C (Medio — operador bloquea) ---");
   const medium = attachGate(createMockProvider(), {
     origin: "https://app.example.com",
@@ -95,14 +133,30 @@ async function runDemo() {
     log(`[C] RECHAZADA POR OPERADOR — ${e.message.slice(0, 60)}…`);
   }
 
-  log("\nDemo completa.");
-}
-
-runBtn.addEventListener("click", () => {
-  runBtn.disabled = true;
-  runDemo()
-    .catch((err) => log(`Fatal: ${err.message}`))
-    .finally(() => {
-      runBtn.disabled = false;
+  log("\n--- Escenario D (signAndSendTransaction hostil) ---");
+  const hostileSend = attachGate(createMockProvider(), {
+    origin: "https://drainer-domain.evil",
+    decision: "approve",
+  });
+  const auditTx = buildHostileSignAndSendTx();
+  try {
+    await hostileSend.signAndSendTransaction(auditTx);
+    log("[D] ERROR — debio bloquearse");
+  } catch (e) {
+    const verdict = await evaluateIntent({
+      method: "signAndSendTransaction",
+      origin: "https://drainer-domain.evil",
+      transactions: [auditTx],
     });
-});
+    const report = await buildForensicReport({
+      requestId: "browser-demo-scenario-d",
+      maliciousPayload: { method: "signAndSendTransaction", transactions: [auditTx] },
+      semanticAnalysis: verdict,
+    });
+    const hash = report.PaladinShield_Forensic_Report.paladinForensicHash;
+    log(`[D] HARD-BLOCK (sin UI) — ${e.message.slice(0, 60)}…`);
+    log(`[D] Forensic hash: ${hash.slice(0, 16)}…`);
+  }
+
+  log("\nDemo completa — escenarios A–D.");
+}

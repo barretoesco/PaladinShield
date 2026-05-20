@@ -1,13 +1,13 @@
 {
-  "name": "@paladinshield/rel-core",
-  "version": "0.4.1",
-  "description": "PaladinShield REL — Phase 3 wallet SDK reference (post-submit): policy, Promise gate, intent normalization, shadow mode, full forensic parity. Not production-ready; not submission scope.",
+  "name": "@paladinshield/rel-policy",
+  "version": "0.1.0",
+  "description": "PaladinShield REL — mock remote policyEngine adapters for wallet SDK integration demos (post-submit stub, not production).",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/barretoesco/PaladinShield.git",
-    "directory": "packages/rel-core"
+    "directory": "packages/rel-policy"
   },
-  "homepage": "https://github.com/barretoesco/PaladinShield/tree/master/packages/rel-core",
+  "homepage": "https://github.com/barretoesco/PaladinShield/tree/master/packages/rel-policy",
   "bugs": {
     "url": "https://github.com/barretoesco/PaladinShield/issues"
   },
@@ -30,13 +30,22 @@
     "wallet",
     "security",
     "runtime-enforcement-layer",
-    "paladinshield"
+    "paladinshield",
+    "policy-engine"
   ],
   "license": "GPL-3.0-only",
   "scripts": {
-    "test": "node --test tests/policy.test.mjs tests/gate.test.mjs tests/forensic.test.mjs tests/decision-token.test.mjs"
+    "test": "node --test tests/mock-engine.test.mjs tests/remote-client.test.mjs"
   },
   "engines": {
     "node": ">=18"
+  },
+  "peerDependencies": {
+    "@paladinshield/rel-core": ">=0.3.0"
+  },
+  "peerDependenciesMeta": {
+    "@paladinshield/rel-core": {
+      "optional": true
+    }
   }
 }

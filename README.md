@@ -114,15 +114,23 @@ Added **after** the Colosseum submission closed, for reviewers who choose to dig
 | Addition | Purpose |
 |----------|---------|
 | `policy-heuristics.js` shared with SDK | Same local policy as the extension; no drift |
-| `packages/rel-core/examples/wallet-shell.mjs` | Node demo: mock `window.solana` + `createRelGate` (hostile hard-block, benign approve, medium-risk operator choice) |
+| `packages/rel-core/examples/wallet-shell.mjs` | Node demo: mock `window.solana` + `createRelGate` (A–D scenarios) |
+| `packages/rel-core/examples/browser-demo.html` | Browser demo A–D — `npm run demo:browser` |
+| `packages/rel-core/examples/wallet-lab.html` | **REL Integration Lab** — simulated signing surface + dApp (not a wallet product) |
+| `@paladinshield/rel-policy` stub | Mock/HTTP `policyEngine` adapters for remote semantic policy |
+
+**Wallet-native direction (SDK — not a wallet product).** PaladinShield is a Runtime Enforcement Layer (REL): middleware that sits **before** a wallet’s native signer, not a competitor to Phantom or any consumer wallet. The post-submit `@paladinshield/rel-core` package and the **[REL Integration Lab](packages/rel-core/examples/wallet-lab.html)** simulate how enforcement embeds in a wallet’s signing surface — policy verdict, operator approve/reject, decision-token anti-spoof, and shadow mode — so wallet teams can see the integration path without shipping a new app. The MV3 extension remains the judged demo; the SDK and Lab are optional for reviewers and partners exploring embeddable REL on Solana.
 
 If curious (Node 18+ only, skip otherwise):
 
 ```bash
+npm test
 node packages/rel-core/examples/wallet-shell.mjs
+npm run demo:browser
+npm run demo:wallet-lab
 ```
 
-This illustrates where REL lives next — **inside the wallet signing surface** — without changing what was submitted for judging.
+See also: [docs/SDK_ROADMAP.md](docs/SDK_ROADMAP.md) · [docs/WALLET_LAB.md](docs/WALLET_LAB.md)
 
 ---
 

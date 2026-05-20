@@ -50,6 +50,10 @@
         font-size: 0.8rem;
         line-height: 1.45;
       }
+      pre#log.error {
+        border-color: #f85149;
+        color: #ffa198;
+      }
       code {
         color: #79c0ff;
       }
@@ -62,12 +66,45 @@
       <code>wallet-shell.mjs</code>, rendered in-page.
     </p>
     <p>
-      Serve this folder (required for ES modules):
-      <code>npx serve packages/rel-core/examples -p 3456</code> then open
-      <code>/browser-demo.html</code>.
+      <strong>Serve from repository root</strong> (required — SDK imports extension modules):
     </p>
-    <button type="button" id="run-demo">Run A → B → C demo</button>
-    <pre id="log" aria-live="polite"></pre>
-    <script type="module" src="./browser-demo.js"></script>
+    <p>
+      <code>npx serve . -p 3456</code> (from repo root)<br />
+      Then open
+      <code>/packages/rel-core/examples/browser-demo.html</code>
+    </p>
+    <button type="button" id="run-demo" disabled>Run A → D demo</button>
+    <pre id="log" aria-live="polite">Loading REL modules…</pre>
+    <script type="module">
+      const logEl = document.getElementById("log");
+      const runBtn = document.getElementById("run-demo");
+
+      function showLoadError(error) {
+        logEl.classList.add("error");
+        logEl.textContent = [
+          "Module load failed — demo cannot run.",
+          "",
+          String(error?.message || error),
+          "",
+          "Fix: from repository root run:",
+          "  npm run demo:browser",
+          "Then open:",
+          "  http://localhost:3456/",
+          "",
+          "Do NOT serve only the examples/ folder (../src and extension paths will 404).",
+        ].join("\n");
+      }
+
+      import("./browser-demo.js")
+        .then((mod) => {
+          if (typeof mod.initBrowserDemo === "function") {
+            mod.initBrowserDemo({ logEl, runBtn });
+            logEl.classList.remove("error");
+            logEl.textContent = "Ready. Click Run A → D demo.";
+            runBtn.disabled = false;
+          }
+        })
+        .catch(showLoadError);
+    </script>
   </body>
 </html>

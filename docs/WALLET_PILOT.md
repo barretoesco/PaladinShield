@@ -62,7 +62,7 @@ Local heuristics are canonical in `src/extension/scripts/policy-heuristics.js` (
 
 ## What PaladinShield provides in a pilot
 
-- `@paladinshield/rel-core` v0.2.x reference package (monorepo path install)
+- `@paladinshield/rel-core` v0.4.x reference package (monorepo path install)
 - Runnable demos and tests (see below)
 - Policy alignment with the public extension demo
 - GPL-3.0 engine + optional commercial OEM path for proprietary wallets (see root `README.md` licensing section)
@@ -76,6 +76,9 @@ From repository root (Node 18+):
 ```bash
 npm test
 node packages/rel-core/examples/wallet-shell.mjs
+node packages/rel-core/examples/wallet-with-tokens.mjs
+npm run demo:policy-hook
+npm run demo:browser
 ```
 
 Expected: hostile hard-block without UI, benign approve flow, medium-risk operator decision — all in console.
@@ -83,10 +86,13 @@ Expected: hostile hard-block without UI, benign approve flow, medium-risk operat
 Optional browser demo (static server required):
 
 ```bash
-npx --yes serve packages/rel-core/examples -p 3456
+npm run demo:wallet-lab
 ```
 
-Open `http://localhost:3456/browser-demo.html`.
+Open `http://localhost:3456/` for demo index, or directly:
+`/packages/rel-core/examples/wallet-lab.html`
+
+See [WALLET_LAB.md](./WALLET_LAB.md) — signing surface simulator for integration demos (not a wallet product).
 
 ---
 

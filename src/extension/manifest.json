@@ -24,7 +24,7 @@
   ],
   "web_accessible_resources": [
     {
-      "resources": ["scripts/inject.js"],
+      "resources": ["scripts/inject.js", "scripts/intent-normalizer.js"],
       "matches": ["<all_urls>"]
     }
   ]

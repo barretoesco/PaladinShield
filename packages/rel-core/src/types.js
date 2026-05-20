@@ -29,6 +29,29 @@
  * @property {(ctx: { intent: SignatureIntent, verdict: PolicyVerdict, requestId: string }) => Promise<'approve'|'block'>} requestUserDecision
  * @property {number} [decisionTimeoutMs=90000]
  * @property {boolean} [hardBlockOnCritical=true] Auto-reject Promise on Alto / Bloquear (no override)
+ * @property {'enforce'|'shadow'} [mode='enforce'] shadow = evaluate + log only, never block
+ * @property {() => 'enforce'|'shadow'} [resolveMode] Dynamic mode (overrides mode when set)
+ * @property {(intent: SignatureIntent, verdict: PolicyVerdict) => void} [onShadowVerdict]
+ * @property {(intent: SignatureIntent, verdict: PolicyVerdict) => void} [onBlocked]
+ */
+
+/**
+ * @typedef {Object} RelGateWithTokensOptions
+ * @property {import('./decision-token.js').createDecisionTokenRegistry extends () => infer R ? R : never} [registry]
+ * @property {(ctx: {
+ *   intent: SignatureIntent,
+ *   verdict: PolicyVerdict,
+ *   requestId: string,
+ *   decisionToken: string,
+ *   registry: ReturnType<typeof import('./decision-token.js').createDecisionTokenRegistry>,
+ * }) => Promise<boolean>} requestOperatorApproval
+ * @property {(ctx: { requestId: string }) => void} [onTokenSpoofBlocked]
+ * @property {(intent: SignatureIntent) => Promise<PolicyVerdict>} evaluateIntent
+ * @property {number} [decisionTimeoutMs]
+ * @property {boolean} [hardBlockOnCritical]
+ * @property {'enforce'|'shadow'} [mode]
+ * @property {() => 'enforce'|'shadow'} [resolveMode]
+ * @property {(intent: SignatureIntent, verdict: PolicyVerdict) => void} [onShadowVerdict]
  * @property {(intent: SignatureIntent, verdict: PolicyVerdict) => void} [onBlocked]
  */
 

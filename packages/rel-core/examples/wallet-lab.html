@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Paladin REL Integration Lab — signing surface simulator</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: ui-sans-serif, system-ui, sans-serif;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: #0d1117;
+        color: #e6edf3;
+      }
+      header {
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid #30363d;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        align-items: center;
+        justify-content: space-between;
+      }
+      header h1 {
+        margin: 0;
+        font-size: 1rem;
+        font-weight: 600;
+      }
+      header p {
+        margin: 0.25rem 0 0;
+        color: #8b949e;
+        font-size: 0.8rem;
+      }
+      .mode {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.85rem;
+      }
+      select {
+        background: #161b22;
+        color: #e6edf3;
+        border: 1px solid #30363d;
+        border-radius: 6px;
+        padding: 0.35rem 0.5rem;
+      }
+      main {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        min-height: calc(100vh - 4.5rem);
+      }
+      @media (max-width: 860px) {
+        main {
+          grid-template-columns: 1fr;
+        }
+      }
+      section {
+        padding: 1.25rem 1.5rem;
+        border-right: 1px solid #30363d;
+      }
+      section:last-child {
+        border-right: none;
+        background: #010409;
+      }
+      h2 {
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #8b949e;
+        margin: 0 0 1rem;
+      }
+      .dapp-actions {
+        display: grid;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+      }
+      button {
+        font: inherit;
+        border: none;
+        border-radius: 6px;
+        padding: 0.65rem 0.85rem;
+        cursor: pointer;
+        text-align: left;
+      }
+      button.dapp {
+        background: #21262d;
+        color: #e6edf3;
+        border: 1px solid #30363d;
+      }
+      button.dapp:hover {
+        border-color: #58a6ff;
+      }
+      button.primary {
+        background: #238636;
+        color: #fff;
+      }
+      button.danger {
+        background: #da3633;
+        color: #fff;
+      }
+      pre#dapp-log {
+        background: #161b22;
+        border: 1px solid #30363d;
+        border-radius: 8px;
+        padding: 1rem;
+        min-height: 14rem;
+        white-space: pre-wrap;
+        word-break: break-word;
+        font-family: ui-monospace, monospace;
+        font-size: 0.78rem;
+        line-height: 1.45;
+        margin: 0;
+      }
+      .wallet-card {
+        border: 1px solid #30363d;
+        border-radius: 12px;
+        padding: 1.25rem;
+        background: #161b22;
+        max-width: 24rem;
+      }
+      .wallet-card.pending {
+        border-color: #d29922;
+        box-shadow: 0 0 0 1px rgba(210, 153, 34, 0.2);
+      }
+      .wallet-card h2 {
+        color: #e6edf3;
+        text-transform: none;
+        letter-spacing: normal;
+        font-size: 1.1rem;
+        margin: 0.5rem 0;
+      }
+      .badge {
+        display: inline-block;
+        font-size: 0.72rem;
+        font-weight: 600;
+        padding: 0.2rem 0.45rem;
+        border-radius: 999px;
+        text-transform: uppercase;
+      }
+      .badge.alto,
+      .badge.bloquear {
+        background: rgba(248, 81, 73, 0.2);
+        color: #ffa198;
+      }
+      .badge.medio,
+      .badge.advertir {
+        background: rgba(210, 153, 34, 0.2);
+        color: #e3b341;
+      }
+      .badge.bajo,
+      .badge.confiar {
+        background: rgba(35, 134, 54, 0.2);
+        color: #7ee787;
+      }
+      .meta,
+      .hint {
+        color: #8b949e;
+        font-size: 0.8rem;
+        line-height: 1.45;
+      }
+      .summary,
+      .verdict {
+        font-size: 0.85rem;
+        line-height: 1.5;
+      }
+      .actions {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        margin-top: 1rem;
+      }
+      .actions .row {
+        display: flex;
+        gap: 0.5rem;
+      }
+      .actions .row button {
+        flex: 1;
+      }
+      button.ghost {
+        background: transparent;
+        color: #8b949e;
+        border: 1px dashed #484f58;
+      }
+      .token {
+        font-size: 0.78rem;
+        color: #8b949e;
+      }
+      code {
+        color: #79c0ff;
+        font-family: ui-monospace, monospace;
+        font-size: 0.85em;
+      }
+      .load-error {
+        color: #ffa198;
+        border: 1px solid #f85149;
+        border-radius: 8px;
+        padding: 1rem;
+        background: #161b22;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div>
+        <h1>Paladin REL Integration Lab</h1>
+        <p>
+          Signing surface simulator — shows where REL embeds in a wallet stack.
+          <strong>Not a wallet product.</strong> Not competing with Phantom or any wallet.
+        </p>
+      </div>
+      <label class="mode">
+        REL mode
+        <select id="mode-select">
+          <option value="enforce" selected>enforce (block / prompt)</option>
+          <option value="shadow">shadow (log only)</option>
+        </select>
+      </label>
+    </header>
+    <main>
+      <section>
+        <h2>dApp simulator</h2>
+        <div class="dapp-actions">
+          <button type="button" class="dapp" data-dapp-action="hostile-message">Hostile signMessage</button>
+          <button type="button" class="dapp" data-dapp-action="benign-faucet">Benign faucet signTransaction</button>
+          <button type="button" class="dapp" data-dapp-action="medium-message">Medium-risk signMessage</button>
+          <button type="button" class="dapp" data-dapp-action="hostile-send">Hostile signAndSendTransaction</button>
+        </div>
+        <pre id="dapp-log">Loading wallet lab…</pre>
+      </section>
+      <section>
+        <h2>Signing surface (simulated)</h2>
+        <div id="wallet-panel"></div>
+      </section>
+    </main>
+    <script type="module">
+      const dappLog = document.getElementById("dapp-log");
+      const walletPanel = document.getElementById("wallet-panel");
+      const modeSelect = document.getElementById("mode-select");
+
+      import("./wallet-lab.js")
+        .then((mod) => {
+          dappLog.textContent = "";
+          mod.initWalletLab({ dappLog, walletPanel, modeSelect });
+        })
+        .catch((error) => {
+          dappLog.className = "load-error";
+          dappLog.textContent = [
+          "Module load failed.",
+          "",
+          String(error?.message || error),
+          "",
+          "Run from repo root: npm run demo:wallet-lab",
+          "First load of web3.js txs uses esm.sh (network required once).",
+          ].join("\n");
+        });
+    </script>
+  </body>
+</html>

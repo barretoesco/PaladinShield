@@ -7,10 +7,15 @@
     "doc": "docs"
   },
   "scripts": {
-    "test": "node --test packages/rel-core/tests/policy.test.mjs packages/rel-core/tests/gate.test.mjs",
-    "test:rel-core": "node --test packages/rel-core/tests/policy.test.mjs packages/rel-core/tests/gate.test.mjs",
+    "test": "node --test packages/rel-core/tests/policy.test.mjs packages/rel-core/tests/gate.test.mjs packages/rel-core/tests/forensic.test.mjs packages/rel-core/tests/decision-token.test.mjs packages/rel-core/tests/intent-normalizer.test.mjs packages/rel-policy/tests/mock-engine.test.mjs packages/rel-policy/tests/remote-client.test.mjs",
+    "test:rel-core": "node --test packages/rel-core/tests/policy.test.mjs packages/rel-core/tests/gate.test.mjs packages/rel-core/tests/forensic.test.mjs packages/rel-core/tests/decision-token.test.mjs packages/rel-core/tests/intent-normalizer.test.mjs",
+    "test:rel-policy": "node --test packages/rel-policy/tests/mock-engine.test.mjs packages/rel-policy/tests/remote-client.test.mjs",
     "smoke:rel-core": "node packages/rel-core/examples/smoke.mjs",
-    "demo:wallet-shell": "node packages/rel-core/examples/wallet-shell.mjs"
+    "demo:wallet-shell": "node packages/rel-core/examples/wallet-shell.mjs",
+    "demo:wallet-tokens": "node packages/rel-core/examples/wallet-with-tokens.mjs",
+    "demo:policy-hook": "node packages/rel-policy/examples/policy-hook-demo.mjs",
+    "demo:browser": "node -e \"console.log('\\n  PaladinShield browser demo\\n  → http://localhost:3456/\\n')\" && npx --yes serve . -p 3456",
+    "demo:wallet-lab": "node -e \"console.log('\\n  REL Integration Lab\\n  → http://localhost:3456/packages/rel-core/examples/wallet-lab.html\\n')\" && npx --yes serve . -p 3456"
   },
   "keywords": [],
   "author": "",

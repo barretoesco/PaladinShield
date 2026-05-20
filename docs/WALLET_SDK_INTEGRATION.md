@@ -1,100 +1,287 @@
 # PaladinShield Wallet SDK Integration (`@paladinshield/rel-core`)
 
-> **Status: in development (Phase 3 roadmap).**  
-> This package is an **early reference starter** — API surface and contracts aligned with the MV3 extension, plus a Node smoke example. It is **not** a finished wallet SDK and is **not** required to run or judge the hackathon demo. **Shipped and functional today:** the MV3 extension in `src/extension/`.
 
-Phase 3 target: **wallet-native** Runtime Enforcement Layer (REL). The extension remains the public demo vehicle; `@paladinshield/rel-core` documents where the same enforcement logic is heading for embeddable Promise gating.
 
-**Audience:** Solana wallet teams, browser wallet shells, institutional signing surfaces — not consumer dApp developers (users inherit protection via wallet, not per-app integration).
+> **Status: Phase 3 post-submit (v0.3.x in development).**  
 
-## Install (monorepo / local path)
+> Not required to judge the hackathon demo. **Shipped product today:** MV3 extension in `src/extension/`.
+
+
+
+Wallet-native Runtime Enforcement Layer (REL) — same policy contract as the extension, embeddable via Promise gating.
+
+
+
+**Audience:** Solana wallet teams and signing surfaces — not per-dApp integration.
+
+
+
+## Install (monorepo)
+
+
 
 ```bash
+
 npm install file:./packages/rel-core
+
 ```
 
-## Core API
+
+
+## Core API (v0.3.x)
+
+
 
 | Export | Role |
-|--------|------|
-| `evaluateIntent(intent, { policyEngine })` | Local heuristics first; optional async remote policy |
-| `isCriticalVerdict(verdict)` | `true` for `Alto` / `Bloquear` |
-| `createRelGate(options)` | Promise gate around any signing function |
-| `wrapSolanaProvider(provider, options)` | Drop-in wrap for `signTransaction` / `signAllTransactions` / `signMessage` |
-| `computePaladinForensicHash(inner)` | SHA-256 anchor (Evidence Hub compatible) |
-| `buildForensicReport({ requestId, maliciousPayload, semanticAnalysis })` | Forensic JSON bundle |
 
-## Minimal wallet integration (~15 lines)
+|--------|------|
+
+| `evaluateIntent(intent, { policyEngine })` | Local heuristics first; optional remote policy |
+
+| `evaluatePayloadAuditMarkers(intent)` | Tx/memo audit markers (hostile drill patterns) |
+
+| `isCriticalVerdict(verdict)` | `true` for `Alto` / `Bloquear` |
+
+| `createRelGate(options)` | Promise gate around any signing function |
+
+| `createRelGateWithTokens(options)` | Gate with decision-token registration + validation |
+
+| `wrapSolanaProviderWithTokens(provider, options)` | Provider wrap with built-in token-safe operator flow |
+
+| `simulateSpoofApprove(registry, requestId)` | Anti-spoof drill helper for demos |
+
+| `wrapSolanaProvider(provider, options)` | Wrap `signTransaction`, `signAllTransactions`, `signMessage`, `signAndSendTransaction` |
+
+| `buildFullCertificateText(inner)` | Full forensic certificate (extension parity) |
+
+| `computePaladinForensicHash(inner)` | SHA-256 anchor (Evidence Hub compatible) |
+
+| `buildForensicReport({ requestId, maliciousPayload, semanticAnalysis })` | Forensic JSON envelope + hash |
+
+| `createDecisionToken()` | Reference token generator for wallet hosts |
+
+| `createDecisionTokenRegistry()` | In-memory registry (replace in production) |
+
+| `acceptOperatorDecision(...)` | Validate token before releasing gate |
+
+
+
+## Runnable examples
+
+
+
+```bash
+
+npm test
+
+node packages/rel-core/examples/wallet-shell.mjs
+
+node packages/rel-core/examples/wallet-with-tokens.mjs
+
+node packages/rel-policy/examples/policy-hook-demo.mjs
+
+npx --yes serve . -p 3456
+# → http://localhost:3456/  (redirects to browser demo)
+
+```
+
+
+
+## Minimal wallet integration
+
+
 
 ```javascript
+
 import {
+
   evaluateIntent,
+
   wrapSolanaProvider,
+
   buildForensicReport,
+
   isCriticalVerdict,
+
+  createDecisionToken,
+
+  createDecisionTokenRegistry,
+
+  acceptOperatorDecision,
+
 } from "@paladinshield/rel-core";
 
+
+
+const tokenRegistry = createDecisionTokenRegistry();
+
+
+
 const provider = wrapSolanaProvider(window.solana, {
+
   origin: window.location.origin,
+
   evaluateIntent: (intent) =>
+
     evaluateIntent(intent, {
+
       policyEngine: async (payload) => {
+
         const res = await fetch("https://your-policy-service/v1/audit", {
+
           method: "POST",
+
           headers: { "Content-Type": "application/json" },
+
           body: JSON.stringify(payload),
+
         });
-        return res.json(); // { riesgo, accion, mensaje }
+
+        return res.json();
+
       },
+
     }),
+
   requestUserDecision: async ({ intent, verdict, requestId }) => {
+
     if (isCriticalVerdict(verdict)) return "block";
+
+
+
+    const decisionToken = createDecisionToken();
+
+    tokenRegistry.register(requestId, decisionToken);
+
+
+
     const approved = await myWalletUi.confirm({ intent, verdict, requestId });
-    return approved ? "approve" : "block";
+
+    if (!approved) return "block";
+
+
+
+    return acceptOperatorDecision("approve", decisionToken, tokenRegistry, requestId)
+
+      ? "approve"
+
+      : "block";
+
   },
+
   hardBlockOnCritical: true,
+
   onBlocked: async (intent, verdict) => {
+
     const report = await buildForensicReport({
+
       requestId: intent.requestId,
+
       maliciousPayload: intent,
+
       semanticAnalysis: verdict,
+
     });
+
     await myWalletUi.showForensic(report);
+
   },
+
 });
+
 ```
+
+
+
+## Remote policy (`@paladinshield/rel-policy` stub)
+
+
+
+When local heuristics return `null`, wire a remote semantic engine via `policyEngine`:
+
+
+
+```javascript
+
+import { evaluateIntent } from "@paladinshield/rel-core";
+
+import { createRemotePolicyClient } from "@paladinshield/rel-policy";
+
+
+
+const policyEngine = createRemotePolicyClient({
+
+  endpoint: "https://your-policy-service/v1/audit",
+
+});
+
+
+
+const verdict = await evaluateIntent(intent, { policyEngine });
+
+```
+
+
+
+For pilots without a backend yet, use `createMockPolicyEngine()` — see `packages/rel-policy/examples/policy-hook-demo.mjs`.
+
+
 
 ## Policy verdict contract
 
+
+
 ```json
+
 {
+
   "riesgo": "Alto|Medio|Bajo",
+
   "accion": "Bloquear|Advertir|Confiar",
+
   "mensaje": "Accion: ... Analisis: ..."
+
 }
+
 ```
 
-Same JSON shape as the MV3 extension semantic engine (`translator.js` + `policy-heuristics.js`).
 
-## Policy source of truth
 
-Local heuristics: **`src/extension/scripts/policy-heuristics.js`** (shipped with the extension). `@paladinshield/rel-core` imports that module — judges evaluate the extension; SDK folder shows post-submit direction only. See [SDK_ROADMAP.md](./SDK_ROADMAP.md).
+Canonical heuristics: `src/extension/scripts/policy-heuristics.js` (shared with SDK).
 
-## Scope honesty
 
-`@paladinshield/rel-core` v0.1.0 is **roadmap scaffolding**, not a release candidate:
 
-| Shipped in starter | Not shipped (roadmap) |
-|--------------------|---------------------|
-| Local heuristics (`signMessage` patterns, honey-pot checks) | OpenAI / remote policy client |
-| Promise gate primitives (`createRelGate`, `wrapSolanaProvider`) | MV3 bridge, popup UX, decision tokens |
-| Forensic hash helpers | Full certificate narrative (`forensic-certificate.js` parity) |
-| Smoke example (`examples/smoke.mjs`) | npm publish, wallet partner integration, RPC Guard |
+## Scope (v0.3.x)
 
-We only document this folder to show **direction and API intent** post-hackathon — same policy contract as `translator.js`, embeddable beyond the browser extension.
+
+
+| Shipped | Roadmap |
+
+|---------|---------|
+
+| Local heuristics + audit markers | Hosted policy backend (production) |
+
+| Promise gate + all four sign methods | Production wallet UI kit |
+
+| Full forensic certificate + hash parity | npm publish |
+
+| Decision-token reference | `@paladinshield/rel-policy` mock/HTTP stub |
+
+| Decision-token reference helpers | RPC Guard |
+
+| Node + browser demos | Remote policy OpenAI client in SDK |
+
+
+
+See [SDK_ROADMAP.md](./SDK_ROADMAP.md) · [WALLET_PILOT.md](./WALLET_PILOT.md) · [THREAT_MODEL.md](./THREAT_MODEL.md)
+
+
 
 ## Related
 
+
+
 - Extension demo: `src/extension/`
+
 - Post-submit hardening: `docs/POST_SUBMIT_SECURITY_HARDENING.md`
-- Threat model limits: extension README + `SECURITY_ROADMAP.md`
+

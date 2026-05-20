@@ -9,7 +9,7 @@
  * @module wallet-shell
  */
 
-import { createRelGate, evaluateIntent } from "../src/index.js";
+import { createRelGate, evaluateIntent, buildForensicReport } from "../src/index.js";
 
 // ---------------------------------------------------------------------------
 // Part 1 — Types & console helpers
@@ -54,6 +54,7 @@ function formatVerdictDetail(verdict) {
  *   signTransaction: (tx: unknown) => Promise<{ signed: true, method: string, payload: unknown }>,
  *   signAllTransactions: (txs: unknown[]) => Promise<{ signed: true, method: string, count: number }>,
  *   signMessage: (message: Uint8Array, display?: string) => Promise<{ signed: true, method: string, bytes: number }>,
+ *   signAndSendTransaction: (tx: unknown) => Promise<{ signed: true, method: string, signature: string }>,
  * }}
  */
 function createMockSolanaProvider() {
@@ -78,6 +79,11 @@ function createMockSolanaProvider() {
     async signMessage(message, _display = "utf8") {
       return { signed: true, method: "signMessage", bytes: message.byteLength };
     },
+
+    /** @param {unknown} tx */
+    async signAndSendTransaction(tx) {
+      return { signed: true, method: "signAndSendTransaction", signature: "mock-signature-base58" };
+    },
   };
 }
 
@@ -94,7 +100,12 @@ function attachRelGateToProvider(provider, options) {
   const runGate = createRelGate(options);
   const origin = options.origin ?? "unknown";
 
-  for (const method of /** @type {const} */ (["signTransaction", "signAllTransactions", "signMessage"])) {
+  for (const method of /** @type {const} */ ([
+    "signTransaction",
+    "signAllTransactions",
+    "signMessage",
+    "signAndSendTransaction",
+  ])) {
     const original = provider[method].bind(provider);
     provider[method] = (...args) => runGate(method, args, original, origin);
   }
@@ -186,6 +197,23 @@ function buildBenignFaucetBatch() {
 /** Routine off-chain message — Medio/Advertir (operator must decide). */
 function buildMediumRiskSignMessageBytes() {
   return new TextEncoder().encode("Please confirm this routine account note for Tuesday standup.");
+}
+
+const MEMO_PROGRAM_ID = "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr";
+
+/** Hostile signAndSendTransaction — audit marker in memo (extension v0.1.4 parity). */
+function buildHostileSignAndSendTransaction() {
+  const auditText = "AUDIT_TEST_MALICIOUS_SIGN_AND_SEND";
+  return {
+    metadata: { audit: auditText, target: "drainer-domain.evil" },
+    instructions: [
+      {
+        programId: MEMO_PROGRAM_ID,
+        data: new Uint8Array([...new TextEncoder().encode(auditText)]),
+        keys: [],
+      },
+    ],
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -334,6 +362,49 @@ async function runScenarioCBlockVariant() {
   }
 }
 
+/** @returns {Promise<PolicyVerdict|null>} */
+async function runScenarioD() {
+  const scenarioId = "D (signAndSendTransaction hostil)";
+  const origin = "https://drainer-domain.evil";
+  const { provider, wasUiInvoked } = createRelWrappedWallet({
+    origin,
+    uiLabel: "Wallet UI (no deberia abrirse)",
+    operatorDecision: "approve",
+  });
+
+  const hostileTx = buildHostileSignAndSendTransaction();
+  const capturedVerdict = await evaluateIntent({
+    method: "signAndSendTransaction",
+    origin,
+    action: "signature_intent_detected",
+    transactions: [hostileTx],
+  });
+
+  try {
+    await provider.signAndSendTransaction(hostileTx);
+    logScenarioLine(scenarioId, capturedVerdict, "ERROR — no debio enviar transaccion");
+    return capturedVerdict;
+  } catch (error) {
+    const result = wasUiInvoked() ? "HARD-BLOCK (UI abierta — regresion)" : "HARD-BLOCK (sin UI)";
+
+    if (capturedVerdict) {
+      const report = await buildForensicReport({
+        requestId: "wallet-shell-scenario-d",
+        maliciousPayload: { method: "signAndSendTransaction", origin, transactions: [hostileTx] },
+        semanticAnalysis: capturedVerdict,
+      });
+      const hash = report.PaladinShield_Forensic_Report.paladinForensicHash;
+      console.log(`[PALADIN-REL] Forensic hash (Evidence Hub parity): ${hash.slice(0, 16)}…`);
+    }
+
+    logScenarioLine(scenarioId, capturedVerdict, result);
+    if (error instanceof Error) {
+      console.log(`[PALADIN-REL] Detalle: ${error.message.slice(0, 140)}…`);
+    }
+    return capturedVerdict;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Part 6 — Main
 // ---------------------------------------------------------------------------
@@ -354,7 +425,9 @@ async function main() {
   console.log("");
   await runScenarioCBlockVariant();
   console.log("");
-  console.log("[PALADIN-REL] Demo completa — 3 escenarios + variante bloqueo operador.");
+  await runScenarioD();
+  console.log("");
+  console.log("[PALADIN-REL] Demo completa — escenarios A–D (+ variante C′ bloqueo operador).");
   console.log("");
 }
 
