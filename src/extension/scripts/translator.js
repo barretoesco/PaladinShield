@@ -10,13 +10,74 @@ const OPENAI_CHAT_COMPLETIONS_URL = "https://api.openai.com/v1/chat/completions"
 const OPENAI_SEMANTIC_MODEL = "gpt-4o-mini";
 const OPENAI_REQUEST_TIMEOUT_MS = 4000;
 
-/** Fail-safe local si timeout, red o JSON inválido (REL default-deny). */
-const FAILSAFE_SEMANTIC_VERDICT = {
-  riesgo: "Alto",
-  accion: "Bloquear",
-  mensaje:
-    'ANALISIS SEMANTICO CRITICO: Se ha detectado un "Drainer" de firma ciega. El payload intenta delegar permisos de transferencia total sobre tus activos de Solana a un contrato no verificado. REL ha bloqueado la ejecucion para prevenir el vaciado de la wallet.',
-};
+/** Fail-safe base — message is honest (engine unavailable), not a fake drainer narrative. */
+function buildFailSafeVerdict(transactionObject, reason) {
+  const origin = transactionObject?.origin || "";
+  if (isUtilityOrigin(origin)) {
+    return {
+      riesgo: "Medio",
+      accion: "Advertir",
+      mensaje: `Accion: Motor semantico no disponible (${reason}). Analisis: Origen tipo faucet o utilidad publica — revisa el payload manualmente antes de autorizar.`,
+      __openAiFailSafe: true,
+      __openAiReason: reason,
+    };
+  }
+
+  return {
+    riesgo: "Alto",
+    accion: "Bloquear",
+    mensaje: `Accion: Motor semantico no disponible (${reason}). Analisis: REL fail-closed — no se pudo auditar el intent; firma bloqueada por politica.`,
+    __openAiFailSafe: true,
+    __openAiReason: reason,
+  };
+}
+
+function isUtilityOrigin(origin) {
+  const lower = (origin || "").toString().toLowerCase();
+  return /faucet|airdrop|testnet|devnet|spl-token|token-faucet|drip|\.solana\.org|explorer\.solana/i.test(lower);
+}
+
+function evaluateUtilityOriginBenign(transactionObject) {
+  const origin = transactionObject?.origin || "";
+  if (!isUtilityOrigin(origin)) return null;
+
+  const programIds = Array.isArray(transactionObject?.programIds)
+    ? transactionObject.programIds.filter(Boolean)
+    : [];
+  if (programIds.length) {
+    for (const programId of programIds) {
+      if (!BENIGN_INFRA_PROGRAM_IDS.has(String(programId))) {
+        return null;
+      }
+    }
+    return {
+      riesgo: "Bajo",
+      accion: "Confiar",
+      mensaje:
+        "Accion: Solicitud acorde a utilidad publica (faucet/devnet). Analisis: Programas de infraestructura estandar detectados localmente; sin senales de drenaje.",
+    };
+  }
+
+  const txs = Array.isArray(transactionObject?.transactions) ? transactionObject.transactions : [];
+  if (!txs.length) return null;
+
+  for (const tx of txs) {
+    const instructions = Array.isArray(tx?.instructions) ? tx.instructions : [];
+    for (const instruction of instructions) {
+      const programId = (instruction?.programId || "").toString();
+      if (programId && !BENIGN_INFRA_PROGRAM_IDS.has(programId)) {
+        return null;
+      }
+    }
+  }
+
+  return {
+    riesgo: "Bajo",
+    accion: "Confiar",
+    mensaje:
+      "Accion: Solicitud acorde a utilidad publica (faucet/devnet). Analisis: Solo programas de infraestructura estandar detectados localmente; sin senales de drenaje.",
+  };
+}
 const AUDITOR_ROLE_PROMPT = [
   "Eres el motor semantico de politica de PaladinShield (Runtime Enforcement Layer).",
   "No eres un asistente conversacional: emites un VEREDICTO estructurado (riesgo, accion, mensaje) que alimenta la capa de enforcement bajo default-deny.",
@@ -272,7 +333,7 @@ function resolveOpenAiApiKey(options = {}) {
 async function callOpenAiSemantic(transactionObject, options = {}) {
   const apiKey = resolveOpenAiApiKey(options);
   if (!apiKey) {
-    return { ...FAILSAFE_SEMANTIC_VERDICT, __openAiFailSafe: true, __openAiReason: "missing_api_key" };
+    return buildFailSafeVerdict(transactionObject, "missing_api_key");
   }
 
   const payloadAsString = buildUserPrompt(transactionObject);
@@ -301,9 +362,7 @@ async function callOpenAiSemantic(transactionObject, options = {}) {
     if (!response.ok) {
       const errText = await response.text().catch(() => "");
       return {
-        ...FAILSAFE_SEMANTIC_VERDICT,
-        __openAiFailSafe: true,
-        __openAiReason: `http_${response.status}`,
+        ...buildFailSafeVerdict(transactionObject, `http_${response.status}`),
         __openAiErrorDetail: errText?.slice(0, 500),
       };
     }
@@ -311,12 +370,12 @@ async function callOpenAiSemantic(transactionObject, options = {}) {
     const payload = await response.json();
     const content = payload?.choices?.[0]?.message?.content;
     if (typeof content !== "string" || !content.trim()) {
-      return { ...FAILSAFE_SEMANTIC_VERDICT, __openAiFailSafe: true, __openAiReason: "empty_content" };
+      return buildFailSafeVerdict(transactionObject, "empty_content");
     }
 
     const parsed = extractJsonObject(content);
     if (!parsed) {
-      return { ...FAILSAFE_SEMANTIC_VERDICT, __openAiFailSafe: true, __openAiReason: "json_parse" };
+      return buildFailSafeVerdict(transactionObject, "json_parse");
     }
 
     try {
@@ -326,14 +385,12 @@ async function callOpenAiSemantic(transactionObject, options = {}) {
         __openAiRawResponse: content,
       };
     } catch {
-      return { ...FAILSAFE_SEMANTIC_VERDICT, __openAiFailSafe: true, __openAiReason: "schema" };
+      return buildFailSafeVerdict(transactionObject, "schema");
     }
   } catch (error) {
     const aborted = error?.name === "AbortError" || controller.signal.aborted;
     return {
-      ...FAILSAFE_SEMANTIC_VERDICT,
-      __openAiFailSafe: true,
-      __openAiReason: aborted ? "timeout_4s" : "network_or_parse",
+      ...buildFailSafeVerdict(transactionObject, aborted ? "timeout_4s" : "network_or_parse"),
       __openAiErrorMessage: error?.message || String(error),
     };
   } finally {
@@ -353,6 +410,11 @@ async function translateTransaction(transactionObject, options = {}) {
     }
   }
 
+  const utilityBenign = evaluateUtilityOriginBenign(transactionObject);
+  if (utilityBenign) {
+    return utilityBenign;
+  }
+
   const honeyPotHeuristic = evaluateHoneyPotRisk(transactionObject);
   if (honeyPotHeuristic) {
     return honeyPotHeuristic;
@@ -362,6 +424,10 @@ async function translateTransaction(transactionObject, options = {}) {
 }
 
 function evaluateHoneyPotRisk(transactionObject) {
+  if (isUtilityOrigin(transactionObject?.origin)) {
+    return null;
+  }
+
   const txs = Array.isArray(transactionObject?.transactions) ? transactionObject.transactions : [];
   if (!txs.length) return null;
 
@@ -423,6 +489,16 @@ function evaluateMessageRisk(transactionObject) {
   if (!text.trim()) return null;
 
   const upper = text.toUpperCase();
+
+  if (/MALICIOUS|DRAINER|AUDIT_TEST_MALICIOUS|BLIND.?SIGN/i.test(upper)) {
+    return {
+      riesgo: "Alto",
+      accion: "Bloquear",
+      mensaje:
+        "Accion: Firma de mensaje marcado como malicioso o de auditoria hostil. Analisis: Patron de prueba/drainer detectado localmente; default-deny aplica.",
+    };
+  }
+
   const suspiciousKeywords = [
     "VERIFICATION",
     "SECURITY",

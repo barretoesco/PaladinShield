@@ -13,7 +13,11 @@ const DECISION_TOKEN_REGISTER_CHANNEL = "CLEAR_SIGN_AI_DECISION_TOKEN_REGISTER";
 const GET_CURRENT_STATE_TYPE = "GET_CURRENT_STATE";
 const pendingSignatureRequests = new Map();
 const POPUP_PATH = "ui/popup.html";
+const PAGE_HANDLER_REGISTER = "__paladinShieldRegisterDecisionToken";
+const PAGE_HANDLER_ACCEPT = "__paladinShieldAcceptDecision";
 let activePopupWindowId = null;
+/** Evita que cerrar el popup tras CONFIAR/BLOQUEAR dispare default-deny por carrera. */
+let suppressPopupCloseBlockUntil = 0;
 
 function createIdleState() {
   return {
@@ -46,14 +50,61 @@ function createDecisionToken() {
   return `dt_${Date.now()}_${Math.random().toString(16).slice(2)}`;
 }
 
-async function registerDecisionTokenOnTab(tabId, requestId, decisionToken) {
-  if (!tabId || !requestId || !decisionToken) return;
+function suppressPopupCloseBlock(durationMs = 2500) {
+  suppressPopupCloseBlockUntil = Date.now() + durationMs;
+}
+
+async function executePageHandler(tabId, handlerName, args, retries = 4) {
+  if (!tabId) return false;
+
+  if (chrome.scripting?.executeScript) {
+    for (let attempt = 0; attempt < retries; attempt += 1) {
+      try {
+        const results = await chrome.scripting.executeScript({
+          target: { tabId },
+          world: "MAIN",
+          func: (name, handlerArgs) => {
+            const fn = window[name];
+            if (typeof fn !== "function") return false;
+            fn.apply(null, handlerArgs);
+            return true;
+          },
+          args: [handlerName, args],
+        });
+        if (results?.[0]?.result === true) return true;
+      } catch (_) {
+        // inject handlers may not be ready yet on document_start races
+      }
+      await new Promise((resolve) => setTimeout(resolve, 100 * (attempt + 1)));
+    }
+  }
+
   try {
     await chrome.tabs.sendMessage(tabId, {
-      type: DECISION_TOKEN_REGISTER_CHANNEL,
-      payload: { requestId, decisionToken },
+      type:
+        handlerName === PAGE_HANDLER_REGISTER
+          ? DECISION_TOKEN_REGISTER_CHANNEL
+          : DECISION_TO_CONTENT_CHANNEL,
+      payload:
+        handlerName === PAGE_HANDLER_REGISTER
+          ? { requestId: args[0], decisionToken: args[1] }
+          : {
+              requestId: args[0],
+              decision: args[1],
+              decisionToken: args[2],
+              reason: args[3] || "",
+            },
     });
-  } catch (error) {
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+async function registerDecisionTokenOnTab(tabId, requestId, decisionToken) {
+  if (!tabId || !requestId || !decisionToken) return;
+  const ok = await executePageHandler(tabId, PAGE_HANDLER_REGISTER, [requestId, decisionToken]);
+  if (!ok) {
     console.warn("🛡️ ENFORCEMENT: Could not register decision token on tab.");
   }
 }
@@ -225,30 +276,33 @@ async function broadcastAnalysisUpdate(payload) {
 async function dispatchSignatureDecision(requestId, decision, reason = "") {
   const pending = pendingSignatureRequests.get(requestId);
   if (!pending) {
-    return;
+    return false;
   }
 
-  const payload = {
-    requestId,
-    decision,
-    decisionToken: pending.decisionToken,
-    reason,
-    timestamp: new Date().toISOString(),
-  };
+  const decisionToken = pending.decisionToken;
+  const tabId = pending.tabId;
 
   try {
-    if (!pending.tabId) {
+    if (!tabId) {
       throw new Error("Missing sender tabId for decision dispatch.");
     }
-    if (!pending.decisionToken) {
+    if (!decisionToken) {
       throw new Error("Missing decision token for secure dispatch.");
     }
-    await chrome.tabs.sendMessage(pending.tabId, {
-      type: DECISION_TO_CONTENT_CHANNEL,
-      payload,
-    });
+
+    const delivered = await executePageHandler(tabId, PAGE_HANDLER_ACCEPT, [
+      requestId,
+      decision,
+      decisionToken,
+      reason,
+    ]);
+    if (!delivered) {
+      throw new Error("Decision handler not reachable in page world.");
+    }
+    return true;
   } catch (error) {
-    console.warn("🛡️ ENFORCEMENT: Could not dispatch decision to content script.");
+    console.warn("🛡️ ENFORCEMENT: Could not dispatch decision to page runtime.", error?.message || error);
+    return false;
   } finally {
     pendingSignatureRequests.delete(requestId);
     await setIdleStateIfNoPending();
@@ -272,6 +326,9 @@ if (chrome.windows?.onRemoved) {
   chrome.windows.onRemoved.addListener((windowId) => {
     if (!activePopupWindowId || windowId !== activePopupWindowId) return;
     activePopupWindowId = null;
+    if (Date.now() < suppressPopupCloseBlockUntil) {
+      return;
+    }
     blockPendingRequestsOnPopupClose().catch((error) => {
       console.warn("🛡️ ENFORCEMENT: Default-deny close handler error.");
     });
@@ -435,7 +492,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         }
       }
 
-      await dispatchSignatureDecision(requestId, decision, reason);
+      suppressPopupCloseBlock();
+      const delivered = await dispatchSignatureDecision(requestId, decision, reason);
+      if (!delivered) {
+        throw new Error("No se pudo entregar la decision al runtime de la pagina.");
+      }
       sendResponse({ ok: true, requestId, decision });
     })().catch((error) => {
       sendResponse({ ok: false, error: error?.message || String(error) });

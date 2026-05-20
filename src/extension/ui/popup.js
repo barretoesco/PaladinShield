@@ -310,16 +310,22 @@ function attachButtonHandlers() {
 
     try {
       alertLockActive = false;
-      await chrome.runtime.sendMessage({
+      const response = await chrome.runtime.sendMessage({
         type: USER_DECISION_CHANNEL,
         decision: "approve",
         requestId,
         state: lastKnownState,
       });
-    } catch (_) {
-      // Si falla el envio, cerramos igualmente para no bloquear UX.
+      if (response?.ok) {
+        window.close();
+      } else {
+        console.warn("[PaladinShield popup] CONFIAR no entregado:", response?.error);
+        acknowledgeButton.textContent = "REINTENTAR CONFIAR";
+      }
+    } catch (error) {
+      console.warn("[PaladinShield popup] CONFIAR fallo:", error);
+      acknowledgeButton.textContent = "REINTENTAR CONFIAR";
     }
-    window.close();
   });
 
   blockButton.addEventListener("click", async () => {

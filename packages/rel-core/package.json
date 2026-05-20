@@ -1,0 +1,24 @@
+{
+  "name": "@paladinshield/rel-core",
+  "version": "0.1.0",
+  "description": "PaladinShield Runtime Enforcement Layer — wallet-embeddable policy types, local heuristics, Promise gate, and forensic hash utilities.",
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "files": [
+    "src"
+  ],
+  "keywords": [
+    "solana",
+    "wallet",
+    "security",
+    "runtime-enforcement-layer",
+    "paladinshield"
+  ],
+  "license": "GPL-3.0-only",
+  "engines": {
+    "node": ">=18"
+  }
+}

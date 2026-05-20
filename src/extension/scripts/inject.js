@@ -269,6 +269,7 @@
     }
 
     if (decision === "approve") {
+      console.log("[PaladinShield inject] Decision approved — releasing Promise gate.");
       pending.resolve({ requestId, decision, reason, timestamp: new Date().toISOString() });
       return;
     }
