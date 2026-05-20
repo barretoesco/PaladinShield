@@ -1,4 +1,4 @@
-export { isCriticalVerdict, evaluateIntent, evaluateIntentHeuristics, evaluateMessageRisk, evaluateHoneyPotRisk } from "./policy.js";
+export { isCriticalVerdict, evaluateIntent, evaluateIntentHeuristics, evaluateMessageRisk, evaluateHoneyPotRisk, evaluatePayloadAuditMarkers } from "./policy.js";
 export { createRelGate, wrapSolanaProvider } from "./gate.js";
 export {
   canonicalJsonStringify,

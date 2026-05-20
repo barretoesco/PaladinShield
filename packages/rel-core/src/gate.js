@@ -69,12 +69,19 @@ export function createRelGate(options) {
       throw new Error(verdict.mensaje || "PaladinShield REL: firma bloqueada por politica critica.");
     }
 
+    /** @type {ReturnType<typeof setTimeout>|undefined} */
+    let decisionTimeoutId;
     const decision = await Promise.race([
       options.requestUserDecision({ intent, verdict, requestId }),
-      new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("PaladinShield REL: decision timeout.")), decisionTimeoutMs)
-      ),
-    ]);
+      new Promise((_, reject) => {
+        decisionTimeoutId = setTimeout(
+          () => reject(new Error("PaladinShield REL: decision timeout.")),
+          decisionTimeoutMs
+        );
+      }),
+    ]).finally(() => {
+      if (decisionTimeoutId !== undefined) clearTimeout(decisionTimeoutId);
+    });
 
     if (decision !== "approve") {
       options.onBlocked?.(intent, verdict);
@@ -98,7 +105,12 @@ export function wrapSolanaProvider(provider, options) {
   const runGate = createRelGate(options);
   const origin = options.origin ?? "unknown";
 
-  for (const method of ["signTransaction", "signAllTransactions", "signMessage"]) {
+  for (const method of [
+    "signTransaction",
+    "signAllTransactions",
+    "signMessage",
+    "signAndSendTransaction",
+  ]) {
     const original = provider[method];
     if (typeof original !== "function" || original[WRAP_FLAG]) continue;
 

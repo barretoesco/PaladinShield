@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PaladinShield REL — Browser Demo (Phase 3 SDK)</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: ui-monospace, "Cascadia Code", "Segoe UI Mono", monospace;
+      }
+      body {
+        margin: 0;
+        padding: 1.5rem;
+        background: #0d1117;
+        color: #e6edf3;
+        max-width: 52rem;
+      }
+      h1 {
+        font-size: 1.1rem;
+        font-weight: 600;
+      }
+      p {
+        color: #8b949e;
+        font-size: 0.85rem;
+        line-height: 1.5;
+      }
+      button {
+        background: #238636;
+        color: #fff;
+        border: none;
+        padding: 0.6rem 1rem;
+        border-radius: 6px;
+        cursor: pointer;
+        font: inherit;
+        margin-bottom: 1rem;
+      }
+      button:disabled {
+        opacity: 0.6;
+        cursor: wait;
+      }
+      pre#log {
+        background: #161b22;
+        border: 1px solid #30363d;
+        border-radius: 8px;
+        padding: 1rem;
+        min-height: 16rem;
+        white-space: pre-wrap;
+        word-break: break-word;
+        font-size: 0.8rem;
+        line-height: 1.45;
+      }
+      code {
+        color: #79c0ff;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>PaladinShield REL — browser demo</h1>
+    <p>
+      Post-submit Phase 3 preview. Not the hackathon extension demo. Same policy fast path as
+      <code>wallet-shell.mjs</code>, rendered in-page.
+    </p>
+    <p>
+      Serve this folder (required for ES modules):
+      <code>npx serve packages/rel-core/examples -p 3456</code> then open
+      <code>/browser-demo.html</code>.
+    </p>
+    <button type="button" id="run-demo">Run A → B → C demo</button>
+    <pre id="log" aria-live="polite"></pre>
+    <script type="module" src="./browser-demo.js"></script>
+  </body>
+</html>

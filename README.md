@@ -15,9 +15,10 @@ PaladinShield is an infrastructure-grade, low-level browser containment layer de
 |------|--------|--------|
 | `src/extension/` | **Shipped — demo here** | Load unpacked in Chrome → see [Installation](#-installation--local-deployment-unpacked-mv3) |
 | `docs/ATTACK_SIMULATION_REPORT.md` | Hostile `signMessage` drill | Reproducible block evidence |
-| `packages/rel-core/` | **Phase 3 roadmap starter (in dev)** | Optional; **not** required for review. Do not expect wallet integration out of the box. |
+| `docs/THREAT_MODEL.md` | REL scope & limits | What the enforcement layer covers — and explicit non-goals |
+| `packages/rel-core/` | **Phase 3 roadmap (post-submit additions — not scored)** | Optional curiosity only if you already reviewed the extension — see [docs/SDK_ROADMAP.md](docs/SDK_ROADMAP.md). **Not** part of the submitted demo. |
 
-**Do not run `npm install` at repo root to judge PaladinShield** — root `package.json` is tooling-only. Optional SDK smoke (Node 18+): `node packages/rel-core/examples/smoke.mjs`.
+**Do not run `npm install` at repo root to judge PaladinShield** — root `package.json` is tooling-only. The extension is the complete evaluation path.
 
 ---
 
@@ -37,7 +38,7 @@ PaladinShield moves the defensive perimeter from the visual interface straight i
 
 Operating as a specialized Promise Proxy, PaladinShield intercepts the global `window.solana` provider via an early-stage script (`scripts/inject.js`) loaded at `document_start` through the content-script bridge.
 
-When a dApp calls `signTransaction`, `signAllTransactions`, or `signMessage`, the wrapped call creates a `decisionPromise` and **awaits** it before invoking the original wallet method. Until the extension delivers an explicit **approve** decision, the caller's Promise stays `pending` and the wallet never receives signing bytes.
+When a dApp calls `signTransaction`, `signAllTransactions`, `signMessage`, or `signAndSendTransaction`, the wrapped call creates a `decisionPromise` and **awaits** it before invoking the original wallet method. Until the extension delivers an explicit **approve** decision, the caller's Promise stays `pending` and the wallet never receives signing bytes.
 
 If the operator closes the verification window without approving, `background.js` dispatches a **block** decision; `scripts/inject.js` rejects the gate at the decision handler (`scripts/inject.js`, reject path ~line 267). Popup close maps to *signature rejected* under default-deny policy.
 
@@ -67,7 +68,8 @@ src/extension/
 │   ├── inject.js                 # Page runtime: Promise proxy on window.solana (page world)
 │   ├── content_script.js         # Bridge: inject + relay SIGNATURE_INTENT / decisions
 │   ├── background.js             # Service worker: state, popup, policy orchestration
-│   ├── translator.js             # Heuristics + OpenAI semantic verdict
+│   ├── translator.js             # OpenAI semantic verdict (imports policy-heuristics.js)
+│   ├── policy-heuristics.js      # Shared local heuristics (extension + rel-core SDK)
 │   └── forensic-certificate.js   # SHA-256 Paladin Forensic Hash + certificate text
 └── ui/
     ├── popup.html / popup.js     # Physical gate: approve / block
@@ -76,7 +78,7 @@ src/extension/
     └── dashboard.html / dashboard.js # Supplementary forensic dashboard
 ```
 
-**Additional docs:** `PROMPT_ENGINEERING.md` (semantic policy pipeline) · `docs/ATTACK_SIMULATION_REPORT.md` (hostile `signMessage` drill and block outcome).
+**Additional docs:** [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md) (scope & limits) · `PROMPT_ENGINEERING.md` (semantic policy pipeline) · [docs/ATTACK_SIMULATION_REPORT.md](docs/ATTACK_SIMULATION_REPORT.md) (hostile `signMessage` drill and block outcome).
 
 ---
 
@@ -97,11 +99,30 @@ PaladinShield ships an active **Evidence Hub**, not only a roadmap item:
 * **Distributed cache:** Broadcasting `paladinForensicHash` to a shared threat cache so peers can hard-block matching exploit fingerprints locally (not implemented in Phase 1).
 * **Local inference:** Moving semantic parsing from remote API calls to on-device inference where hardware allows (planned).
 
-### Phase 3 — RPC Guard & Embedded Policy SDK (in development)
+### Phase 3 — RPC Guard & Embedded Policy SDK (post-submit, active development)
+
+PaladinShield is a **Runtime Enforcement Layer (REL)** — the MV3 extension is the Phase 1 proof surface; wallet-native embedding is the architectural destination (not a browser-extension product long term).
 
 * **RPC Guard:** JSON-RPC edge policy aligned with REL semantics (**planned** — not shipped).
-* **Embedded Policy SDK (`@paladinshield/rel-core`):** **Roadmap / early starter only.** Reference types, local heuristics, Promise-gate primitives, and forensic hash helpers extracted from the MV3 REL — **not a production wallet integration yet.** The **functional product today** is the extension (`src/extension/`). SDK spec and smoke example: `docs/WALLET_SDK_INTEGRATION.md` · `packages/rel-core/`.
+* **Embedded Policy SDK (`@paladinshield/rel-core`):** **Not part of the hackathon submission.** Commits after submit document wallet-native REL — same Promise gate semantics, embeddable beyond the browser shell. **Functional product today:** the extension (`src/extension/`). Details: [docs/SDK_ROADMAP.md](docs/SDK_ROADMAP.md) · [docs/WALLET_SDK_INTEGRATION.md](docs/WALLET_SDK_INTEGRATION.md).
 * **Paladin Verified:** Reputation layer referenced in extension metadata; roadmap only.
+
+#### Post-submit hackathon addition — 2026-05-19
+
+Added **after** the Colosseum submission closed, for reviewers who choose to dig deeper — **optional, at your discretion; not offered as part of the scored deliverable.**
+
+| Addition | Purpose |
+|----------|---------|
+| `policy-heuristics.js` shared with SDK | Same local policy as the extension; no drift |
+| `packages/rel-core/examples/wallet-shell.mjs` | Node demo: mock `window.solana` + `createRelGate` (hostile hard-block, benign approve, medium-risk operator choice) |
+
+If curious (Node 18+ only, skip otherwise):
+
+```bash
+node packages/rel-core/examples/wallet-shell.mjs
+```
+
+This illustrates where REL lives next — **inside the wallet signing surface** — without changing what was submitted for judging.
 
 ---
 

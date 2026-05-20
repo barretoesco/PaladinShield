@@ -9,7 +9,9 @@
   const DECISION_TIMEOUT_MS = 90_000;
   const pendingDecisions = new Map();
 
-  console.log("✅ PaladinShield: Runtime Enforcement Active (signTransaction, signAllTransactions, signMessage)");
+  console.log(
+    "✅ PaladinShield: Runtime Enforcement Active (signTransaction, signAllTransactions, signMessage, signAndSendTransaction)"
+  );
 
   function sleep(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
@@ -150,6 +152,7 @@
           serializedHex: serialized.hex,
           serializedBase64: serialized.base64,
           instructionCount: instructions.length,
+          metadata: tx?.metadata && typeof tx.metadata === "object" ? tx.metadata : undefined,
           instructions: instructions.map((ix, ixIndex) => normalizeInstruction(ix, txIndex, ixIndex)),
         };
       } catch (error) {
@@ -368,6 +371,7 @@
     if (!provider || provider[PROVIDER_FLAG]) return;
     wrapMethod(provider, "signTransaction");
     wrapMethod(provider, "signAllTransactions");
+    wrapMethod(provider, "signAndSendTransaction");
     wrapSignMessage(provider);
     provider[PROVIDER_FLAG] = true;
   }

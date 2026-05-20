@@ -74,7 +74,11 @@ const provider = wrapSolanaProvider(window.solana, {
 }
 ```
 
-Same JSON shape as the MV3 extension semantic engine (`translator.js`).
+Same JSON shape as the MV3 extension semantic engine (`translator.js` + `policy-heuristics.js`).
+
+## Policy source of truth
+
+Local heuristics: **`src/extension/scripts/policy-heuristics.js`** (shipped with the extension). `@paladinshield/rel-core` imports that module — judges evaluate the extension; SDK folder shows post-submit direction only. See [SDK_ROADMAP.md](./SDK_ROADMAP.md).
 
 ## Scope honesty
 

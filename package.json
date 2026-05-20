@@ -1,12 +1,16 @@
 {
   "name": "paladinshield-rel",
   "version": "1.0.0",
+  "type": "module",
   "main": "index.js",
   "directories": {
     "doc": "docs"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node --test packages/rel-core/tests/policy.test.mjs packages/rel-core/tests/gate.test.mjs",
+    "test:rel-core": "node --test packages/rel-core/tests/policy.test.mjs packages/rel-core/tests/gate.test.mjs",
+    "smoke:rel-core": "node packages/rel-core/examples/smoke.mjs",
+    "demo:wallet-shell": "node packages/rel-core/examples/wallet-shell.mjs"
   },
   "keywords": [],
   "author": "",
