@@ -7,6 +7,10 @@
 
 PaladinShield is an infrastructure-grade, low-level browser containment layer designed to secure user intent in Web3. Unlike passive, alert-driven extensions that operate as post-execution advisory tools, PaladinShield enforces security policies directly inside the browser's JavaScript runtime environment **before any signature payload can ever reach the wallet provider interface**.
 
+## Origin & product evolution
+
+PaladinShield began as **ClearSign AI** — semantic translation of signing intents and forensic hashes. After mapping the competitive landscape, we found that most tools **simulate or explain** risk but rarely **physically hold** the signing Promise: warnings alone still leave execution open. We pivoted to PaladinShield as a **Runtime Enforcement Layer (REL)**: promise-gating on `window.solana`, structured policy verdicts (`riesgo (risk)`, `accion (action)`, `mensaje (message)`), default-deny semantics, `signMessage` parity, and verifiable forensic evidence at the pre-sign boundary. The LLM remains the **semantic policy engine**; the product is the **execution gate**, not a chat translator. Legacy identifiers (e.g. `clearsignai:*` storage keys in the codebase) reflect earlier builds and are kept for backward compatibility.
+
 ---
 
 ## 🔬 Core Problem: The Myth of Passive Security
