@@ -1,8 +1,20 @@
 # PaladinShield REL — Product Roadmap (Policy Tiers & Operating Modes)
 
-**Document status:** Design record · **not shipped** · **not part of the Frontier submission scope**  
-**Recorded:** May 2026 · **Implementation target:** post-hackathon review window  
-**Audience:** Internal product direction · wallet pilot conversations · post-submit engineering
+**Document status:** Design record · **planned after public Frontier review**  
+**Recorded:** May 2026 · **Audience:** Colosseum reviewers · wallet pilots · post-review engineering  
+
+---
+
+## For Colosseum reviewers (read this first)
+
+| What is **shipped and judged today** | What this **roadmap** describes |
+|--------------------------------------|----------------------------------|
+| MV3 extension: Promise gate on `window.solana`, **default-deny**, critical-policy block, `signMessage` parity, forensic hash + Evidence Hub | **Next product layer:** tiered policy (A / B / C) and **Smart Path** vs **Full REL** to cut friction on aligned benign flows without auto-passing hostile or incoherent intents |
+| Verify via [ATTACK_SIMULATION_REPORT.md](./ATTACK_SIMULATION_REPORT.md) and unpacked `src/extension/` | **Not** a claim that tier routing is already the behavior under test — it is the **studied, documented** adoption path after review |
+
+**Why it exists:** Market and corpus research (including Colosseum Copilot positioning scripts in `scripts/`) showed that pre-sign **enforcement** is differentiated, but **alert fatigue** kills install rates if every benign signature raises the full gate. This document records how REL scales to mass adoption **without** replacing default-deny on Tier C.
+
+For optional wallet-embed scaffold already in the repo, see [SDK_ROADMAP.md](./SDK_ROADMAP.md).
 
 ---
 
@@ -10,9 +22,9 @@
 
 This roadmap captures the **next evolution** of PaladinShield’s Runtime Enforcement Layer (REL): a **tiered policy model** and **user-selectable operating modes** that reduce friction for benign flows while preserving strict enforcement when declared intent and actual signing payload diverge.
 
-It describes **what** we intend to build and **why** — not implementation mechanics. Engineering detail will follow in a separate phase after the public hackathon review period.
+It describes **what** we intend to build and **why** — product and policy semantics, not a line-by-line implementation guide. Engineering delivery is scheduled **after** the public hackathon review window.
 
-For the already-shipped post-submit SDK scaffold, see [SDK_ROADMAP.md](./SDK_ROADMAP.md).
+For the wallet-embed SDK scaffold documented in parallel, see [SDK_ROADMAP.md](./SDK_ROADMAP.md).
 
 ---
 
@@ -222,9 +234,9 @@ REL raises the bar at the **pre-sign boundary**; tiers optimize **how** the bar 
 
 ## Document lineage
 
-This roadmap records product direction formulated **after** the Frontier submission and **before** public implementation. It is the reference for post-review engineering and wallet conversations.
+This roadmap records product direction formulated **after** the Frontier submission: the **enforcement core** (Promise hold, default-deny, forensics) is demonstrated in the MV3 extension; **tiers and Smart Path** are the adoption layer specified here for post-review delivery. It is the reference for wallet conversations and engineering prioritization once judging concludes.
 
-**Related docs:** [THREAT_MODEL.md](./THREAT_MODEL.md) · [SDK_ROADMAP.md](./SDK_ROADMAP.md) · [WALLET_PILOT.md](./WALLET_PILOT.md) · [WALLET_LAB.md](./WALLET_LAB.md)
+**Related docs:** [THREAT_MODEL.md](./THREAT_MODEL.md) · [SDK_ROADMAP.md](./SDK_ROADMAP.md) · [WALLET_PILOT.md](./WALLET_PILOT.md) · [WALLET_LAB.md](./WALLET_LAB.md) · [colosseum/SUBMISSION_DEV_LOG.md](./colosseum/SUBMISSION_DEV_LOG.md)
 
 ---
 
