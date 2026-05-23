@@ -9,16 +9,27 @@ PaladinShield is an infrastructure-grade, low-level browser containment layer de
 
 ## For reviewers & judges (start here)
 
-**The evaluated product is the MV3 extension** — fully functional without Node.js, npm, or the SDK.
+**The evaluated product is the MV3 extension** — fully functional without Node.js, npm, or the SDK. Enforcement is a **physical Promise hold** on `window.solana`: signing bytes do not reach the wallet until policy and operator action release the gate (not a simulation overlay).
+
+### Five-minute verification path
+
+1. Load unpacked → `src/extension/` ([Installation](#-installation--local-deployment-unpacked-mv3)).
+2. Reproduce the hostile drill → [docs/ATTACK_SIMULATION_REPORT.md](docs/ATTACK_SIMULATION_REPORT.md) (`signMessage` / drainer-class patterns).
+3. Confirm **default-deny**: close the popup without approving → Promise rejected; wallet stays inert on hostile flows.
+4. Optional: open **Evidence Hub** → export JSON and verify `paladinForensicHash` (SHA-256 over canonical fields).
 
 | Path | Status | Action |
 |------|--------|--------|
-| `src/extension/` | **Shipped — demo here** | Load unpacked in Chrome → see [Installation](#-installation--local-deployment-unpacked-mv3) |
-| `docs/ATTACK_SIMULATION_REPORT.md` | Hostile `signMessage` drill | Reproducible block evidence |
-| `docs/THREAT_MODEL.md` | REL scope & limits | What the enforcement layer covers — and explicit non-goals |
-| `packages/rel-core/` | **Phase 3 roadmap (post-submit additions — not scored)** | Optional curiosity only if you already reviewed the extension — see [docs/SDK_ROADMAP.md](docs/SDK_ROADMAP.md). **Not** part of the submitted demo. |
+| `src/extension/` | **Shipped — judge here** | Unpacked MV3 demo; Full REL gate (see [docs/ROADMAP.md](docs/ROADMAP.md) for post-review product tiers) |
+| `docs/ATTACK_SIMULATION_REPORT.md` | Reproducible PoE | Hostile `signMessage` and block outcome |
+| `docs/THREAT_MODEL.md` | Scope & limits | In-scope threats and explicit non-goals |
+| `docs/ROADMAP.md` | Design record | Tier A/B/C and Smart Path — **planned after Frontier review** (adoption; reduces friction without weakening Tier C) |
+| `docs/colosseum/SUBMISSION_DEV_LOG.md` | Forensic justification | Enforcement thesis vs passive / simulation stacks |
+| `packages/rel-core/` | Optional depth | Wallet-embed REL scaffold + Integration Lab — **not required to score the extension** → [docs/SDK_ROADMAP.md](docs/SDK_ROADMAP.md) |
 
 **Do not run `npm install` at repo root to judge PaladinShield** — root `package.json` is tooling-only. The extension is the complete evaluation path.
+
+**Differentiation in one line:** simulation and alert UX **advise**; PaladinShield **holds the signing Promise** until an explicit approve path releases it.
 
 ---
 
@@ -99,17 +110,18 @@ PaladinShield ships an active **Evidence Hub**, not only a roadmap item:
 * **Distributed cache:** Broadcasting `paladinForensicHash` to a shared threat cache so peers can hard-block matching exploit fingerprints locally (not implemented in Phase 1).
 * **Local inference:** Moving semantic parsing from remote API calls to on-device inference where hardware allows (planned).
 
-### Phase 3 — RPC Guard & Embedded Policy SDK (post-submit, active development)
+### Phase 3 — Wallet-native REL & RPC Guard (documented; extension remains the judge path)
 
 PaladinShield is a **Runtime Enforcement Layer (REL)** — the MV3 extension is the Phase 1 proof surface; wallet-native embedding is the architectural destination (not a browser-extension product long term).
 
 * **RPC Guard:** JSON-RPC edge policy aligned with REL semantics (**planned** — not shipped).
-* **Embedded Policy SDK (`@paladinshield/rel-core`):** **Not part of the hackathon submission.** Commits after submit document wallet-native REL — same Promise gate semantics, embeddable beyond the browser shell. **Functional product today:** the extension (`src/extension/`). Details: [docs/SDK_ROADMAP.md](docs/SDK_ROADMAP.md) · [docs/WALLET_SDK_INTEGRATION.md](docs/WALLET_SDK_INTEGRATION.md).
+* **Embedded Policy SDK (`@paladinshield/rel-core`):** Same Promise-gate semantics for wallet hosts — documented for partners and technical reviewers who want depth beyond the extension. Details: [docs/SDK_ROADMAP.md](docs/SDK_ROADMAP.md) · [docs/WALLET_SDK_INTEGRATION.md](docs/WALLET_SDK_INTEGRATION.md).
+* **Policy tiers & Smart Path:** Studied and specified in [docs/ROADMAP.md](docs/ROADMAP.md) for post-review implementation (intent-coherent fast path + full shield on divergence).
 * **Paladin Verified:** Reputation layer referenced in extension metadata; roadmap only.
 
-#### Post-submit hackathon addition — 2026-05-19
+#### Optional repository depth (SDK & Integration Lab)
 
-Added **after** the Colosseum submission closed, for reviewers who choose to dig deeper — **optional, at your discretion; not offered as part of the scored deliverable.**
+The following artifacts support **wallet pilot conversations** and technical due diligence. They are **optional** — skip them unless you have already validated the extension.
 
 | Addition | Purpose |
 |----------|---------|
@@ -164,7 +176,15 @@ See also: [docs/SDK_ROADMAP.md](docs/SDK_ROADMAP.md) · [docs/WALLET_LAB.md](doc
 
 2. **(Optional) Enable semantic analysis for local demos**
 
-   Edit `src/extension/scripts/translator.js` and set `DEMO_OPENAI_API_KEY` to your OpenAI key, **or** rely on the built-in fail-safe (`High` / `Block` fail-safe verdict) when no key is set. Do not commit real keys to a public repository.
+   Copy `.env.example` to `.env`, set `OPENAI_API_KEY`, then sync into the extension (MV3 cannot read `.env` at runtime):
+
+   ```bash
+   cp .env.example .env
+   # edit .env — add your key
+   npm run env:sync
+   ```
+
+   This writes `src/extension/scripts/openai-env.js` (gitignored). Without a key, REL uses local heuristics + fail-safe only. Do not commit real keys.
 
 3. Open `chrome://extensions/`.
 
