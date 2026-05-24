@@ -20,12 +20,20 @@ También conviene distinguir el **vehículo de demo** de la **visión de product
 - **Protección universal en el punto de firma**: el objetivo es que cualquier usuario del ecosistema reciba el mismo control semántico, default-deny y evidencia forense directamente donde aprueba transacciones o `signMessage`.
 - **Infraestructura para el ecosistema**: a largo plazo, PaladinShield debe posicionarse como **security middleware / REL estándar** para productos Solana, de forma que wallets, apps y otros frontends puedan heredar la protección sin reinventar su propio sistema de revisión.
 
+## Evaluación sin fricción (jueces / revisores)
+
+- **REL core (Promise gate + Tier C heurísticas)** no requiere OpenAI — ver [docs/REVIEWER_FAQ.md](docs/REVIEWER_FAQ.md) y [docs/JUDGES_LAB_GUIDE.md](docs/JUDGES_LAB_GUIDE.md).
+- **Producción hackathon+:** proxy reverso temporal (Cloudflare Workers, Vercel, etc.) con rate limit para que el paquete unpacked no lleve secretos ni pida key al juez — alineado con la arquitectura backend de arriba.
+- **`npm run env:sync`:** solo desarrolladores que quieran probar enriquecimiento semántico Tier B en local.
+
 ## Archivos relevantes hoy
 
 | Área | Ubicación |
 |------|-----------|
-| Clave demo hackathon | `src/extension/scripts/translator.js` → `DEMO_OPENAI_API_KEY` |
+| Clave demo hackathon | `src/extension/scripts/openai-env.js` (gitignored; generado por `env:sync`) |
 | Resolución de clave (orden) | `resolveOpenAiApiKey`: `options.apiKey` → `DEMO_OPENAI_API_KEY` → `OPENAI_API_KEY` en `globalThis` / `process.env` (solo entornos de prueba fuera de MV3) |
 | Arranque REL | `src/extension/scripts/background.js` → `ensureRelBootState` publica estado **REL ACTIVE** sin pisar análisis en curso |
+| FAQ revisores | [docs/REVIEWER_FAQ.md](docs/REVIEWER_FAQ.md) |
+| Aislamiento inject | [docs/ENVIRONMENT_ISOLATION.md](docs/ENVIRONMENT_ISOLATION.md) |
 
 Tras la demo, sustituir la clave incrustada por el flujo backend descrito arriba y documentar el despliegue en el README interno del equipo.

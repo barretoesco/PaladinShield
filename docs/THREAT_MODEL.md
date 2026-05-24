@@ -112,6 +112,8 @@ Persistent `pending` promises and user-visible rejects after deny or popup close
 
 ## Related
 
+- [ENVIRONMENT_ISOLATION.md](./ENVIRONMENT_ISOLATION.md) — page-world inject guarantees & race limits  
+- [REVIEWER_FAQ.md](./REVIEWER_FAQ.md) — judge quick answers (B2B thesis, zero-key path)  
 - [ATTACK_SIMULATION_REPORT.md](./ATTACK_SIMULATION_REPORT.md) — hostile `signMessage` drill  
 - [POST_SUBMIT_SECURITY_HARDENING.md](./POST_SUBMIT_SECURITY_HARDENING.md) — v0.1.3 extension hardening  
 - [WALLET_PILOT.md](./WALLET_PILOT.md) — wallet integration pilot (generic)  

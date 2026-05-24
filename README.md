@@ -2,31 +2,51 @@
 
 **Category:** Security Tools & Infrastructure  
 **Sub-Category:** Runtime Enforcement Layer (REL) for Solana  
-**Architecture:** Manifest V3 Unpacked Extension (Page Injection Context)  
+**Architecture:** Manifest V3 Unpacked Extension (Phase 1 proof surface) · Wallet-embed SDK (commercial destination)  
 **Author:** Andrés Barreto (Lead Infrastructure Architect)  
 
-PaladinShield is an infrastructure-grade, low-level browser containment layer designed to secure user intent in Web3. Unlike passive, alert-driven extensions that operate as post-execution advisory tools, PaladinShield enforces security policies directly inside the browser's JavaScript runtime environment **before any signature payload can ever reach the wallet provider interface**.
+PaladinShield is **security middleware** for Solana signing — not another consumer “install our extension” product. It enforces policy with a **physical Promise hold** on wallet signing entry points **before** bytes reach the native signer. Passive simulators and alert overlays **advise**; PaladinShield **blocks execution** until an explicit approve path releases the gate.
+
+## Commercial thesis (B2B infrastructure)
+
+| Phase | What ships | Who it’s for |
+|-------|------------|--------------|
+| **Phase 1 (now)** | MV3 extension + Evidence Hub + lab attestation **E–L** | Hackathon judges, security reviewers, pilots |
+| **Phase 3 (destination)** | `@paladinshield/rel-core` embedded in wallet signing stacks | Phantom, Backpack, Solflare, institutional wallets |
+
+**Pitch in one line:** *PaladinShield is the REL engine wallets integrate under OEM license — so users stop being drained without installing another B2C security extension.*
+
+The unpacked extension exists so anyone can **verify** Promise gating in five minutes. The **business** is wallet-native REL + policy + forensics at the signing boundary ([docs/SDK_ROADMAP.md](docs/SDK_ROADMAP.md) · [docs/WALLET_SDK_INTEGRATION.md](docs/WALLET_SDK_INTEGRATION.md) · [docs/WALLET_PILOT.md](docs/WALLET_PILOT.md)).
+
+---
 
 ## For reviewers & judges (start here)
 
 **The evaluated product is the MV3 extension** — fully functional without Node.js, npm, or the SDK. Enforcement is a **physical Promise hold** on `window.solana`: signing bytes do not reach the wallet until policy and operator action release the gate (not a simulation overlay).
 
-### Five-minute verification path
+### Five-minute verification path (no API key required)
 
 1. Load unpacked → `src/extension/` ([Installation](#-installation--local-deployment-unpacked-mv3)).
 2. Reproduce the hostile drill → [docs/ATTACK_SIMULATION_REPORT.md](docs/ATTACK_SIMULATION_REPORT.md) (`signMessage` / drainer-class patterns).
 3. Confirm **default-deny**: close the popup without approving → Promise rejected; wallet stays inert on hostile flows.
 4. Optional: open **Evidence Hub** → export JSON and verify `paladinForensicHash` (SHA-256 over canonical fields).
+5. Optional: full industrial lab → [docs/JUDGES_LAB_GUIDE.md](docs/JUDGES_LAB_GUIDE.md) (attacks **E–L**, Tier C blocks without OpenAI).
+
+**OpenAI is optional for judging.** Local heuristics + fail-closed semantic path run with **zero** API key. Semantic enrichment (Tier B copy) needs `npm run env:sync` or a team demo key — see [docs/REVIEWER_FAQ.md](docs/REVIEWER_FAQ.md) and [SECURITY_ROADMAP.md](SECURITY_ROADMAP.md).
 
 | Path | Status | Action |
 |------|--------|--------|
 | `src/extension/` | **Shipped — judge here** | Unpacked MV3 demo; Full REL gate (see [docs/ROADMAP.md](docs/ROADMAP.md) for post-review product tiers) |
+| [docs/REVIEWER_FAQ.md](docs/REVIEWER_FAQ.md) | **Start here for hard questions** | B2B thesis, OpenAI path, judge zero-key, race limits (short answers) |
+| [docs/ENVIRONMENT_ISOLATION.md](docs/ENVIRONMENT_ISOLATION.md) | Injection guarantees | What `inject.js` does / does not claim vs advanced page attackers |
 | `docs/ATTACK_SIMULATION_REPORT.md` | Reproducible PoE | Hostile `signMessage` and block outcome |
 | `docs/THREAT_MODEL.md` | Scope & limits | In-scope threats and explicit non-goals |
 | `docs/ROADMAP.md` | Design record | Tier A/B/C and Smart Path — **planned after Frontier review** (adoption; reduces friction without weakening Tier C) |
 | `docs/PALADIN_SECURITY_MANIFEST.md` | Lab attestation | Attacks **E–L** — verified runs, registry hashes, post-deadline patches **PF-01–03** |
+| `docs/JUDGES_LAB_GUIDE.md` | Lab playbook | MV3 lab + Integration Lab + PoC catalog |
 | `docs/colosseum/SUBMISSION_DEV_LOG.md` | Forensic justification | Enforcement thesis vs passive / simulation stacks |
 | `packages/rel-core/` | Optional depth | Wallet-embed REL scaffold + Integration Lab — **not required to score the extension** → [docs/SDK_ROADMAP.md](docs/SDK_ROADMAP.md) |
+| [SECURITY_ROADMAP.md](SECURITY_ROADMAP.md) | Production security | No secrets in client; backend proxy; wallet-native direction |
 
 **Do not run `npm install` at repo root to judge PaladinShield** — root `package.json` is tooling-only. The extension is the complete evaluation path.
 
@@ -50,7 +70,7 @@ PaladinShield moves the defensive perimeter from the visual interface straight i
 
 ### 1. Default-Deny Asynchronous Promise Gating
 
-Operating as a specialized Promise Proxy, PaladinShield intercepts the global `window.solana` provider via an early-stage script (`scripts/inject.js`) loaded at `document_start` through the content-script bridge.
+Operating as a specialized Promise Proxy, PaladinShield intercepts the global `window.solana` provider via an early-stage script (`scripts/inject.js`) loaded at `document_start` through the content-script bridge. Provider **setter traps** and boot-time re-wrap mitigate late wallet injection; honest limits vs prototype-poisoning kits are documented in [docs/ENVIRONMENT_ISOLATION.md](docs/ENVIRONMENT_ISOLATION.md).
 
 When a dApp calls `signTransaction`, `signAllTransactions`, `signMessage`, or `signAndSendTransaction`, the wrapped call creates a `decisionPromise` and **awaits** it before invoking the original wallet method. Until the extension delivers an explicit **approve** decision, the caller's Promise stays `pending` and the wallet never receives signing bytes.
 
@@ -60,10 +80,10 @@ If the operator closes the verification window without approving, `background.js
 
 PaladinShield couples fast client-side checks with optional semantic analysis:
 
-* **Local heuristics (zero network):** `evaluateMessageRisk()` and `evaluateHoneyPotRisk()` in `scripts/translator.js` flag known social-engineering and structural drain patterns before any remote call.
-* **Semantic analysis:** `background.js` forwards captured intents to `translator.js`, which calls OpenAI Chat Completions (`gpt-4o-mini`, JSON mode) per `manifest.json` host permission `https://api.openai.com/*`.
-* **4-second fail-safe:** If the API times out, returns invalid JSON, or no key is configured, the engine applies a **fail-closed** local verdict (honest “semantic engine unavailable” messaging; faucet utility origins may receive `Advertir` instead of hard block). The signing Promise remains held until the operator blocks, closes the popup, approves explicitly, or hits the inject-layer timeout (90s).
-* **Production note:** Hackathon demos may set `DEMO_OPENAI_API_KEY` in `scripts/translator.js`. Public releases should use a backend proxy (see `SECURITY_ROADMAP.md`)—MV3 unpacked builds do not read a `.env` file automatically.
+* **Local heuristics (zero network):** `policy-heuristics.js` (shared with `@paladinshield/rel-core`) flags drainer-class patterns, stealth second-instruction flows, and message phishing lexicon **before** any remote call — Tier **C** can auto-block without OpenAI ([docs/PALADIN_SECURITY_MANIFEST.md](docs/PALADIN_SECURITY_MANIFEST.md)).
+* **Semantic analysis (optional):** `background.js` forwards captured intents to `translator.js`, which may call OpenAI Chat Completions (`gpt-4o-mini`, JSON mode) for **ambiguous** intents — not the only enforcement layer.
+* **8-second fail-safe:** If the API times out, returns invalid JSON, or no key is configured, the engine applies a **fail-closed** local verdict (honest “semantic engine unavailable” messaging; faucet utility origins may receive `Advertir` instead of hard block). The signing Promise remains held until the operator blocks, closes the popup, approves explicitly, or hits the inject-layer timeout (90s).
+* **Production note:** Hackathon demos may use `npm run env:sync` or a team demo key. **Shipping wallets** use a **backend policy proxy** — no third-party API keys in the client ([SECURITY_ROADMAP.md](SECURITY_ROADMAP.md) · `@paladinshield/rel-policy`). **Research:** on-device SLMs (WebLLM / WebGPU) to remove latency and off-device payload exposure — [docs/ROADMAP.md](docs/ROADMAP.md) Phase 2+.
 
 ### 3. signMessage Parity & Session Hardening
 
@@ -92,7 +112,7 @@ src/extension/
     └── dashboard.html / dashboard.js # Supplementary forensic dashboard
 ```
 
-**Additional docs:** [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md) (scope & limits) · `PROMPT_ENGINEERING.md` (semantic policy pipeline) · [docs/ATTACK_SIMULATION_REPORT.md](docs/ATTACK_SIMULATION_REPORT.md) (hostile `signMessage` drill and block outcome).
+**Additional docs:** [docs/REVIEWER_FAQ.md](docs/REVIEWER_FAQ.md) (judge & partner FAQ) · [docs/ENVIRONMENT_ISOLATION.md](docs/ENVIRONMENT_ISOLATION.md) (inject guarantees) · [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md) (scope & limits) · `PROMPT_ENGINEERING.md` (semantic policy pipeline) · [docs/ATTACK_SIMULATION_REPORT.md](docs/ATTACK_SIMULATION_REPORT.md) (hostile `signMessage` drill and block outcome).
 
 ---
 
@@ -113,9 +133,9 @@ PaladinShield ships an active **Evidence Hub**, not only a roadmap item:
 * **Distributed cache:** Broadcasting `paladinForensicHash` to a shared threat cache so peers can hard-block matching exploit fingerprints locally (not implemented in Phase 1).
 * **Local inference:** Moving semantic parsing from remote API calls to on-device inference where hardware allows (planned).
 
-### Phase 3 — Wallet-native REL & RPC Guard (documented; extension remains the judge path)
+### Phase 3 — Wallet-native REL & RPC Guard (commercial destination)
 
-PaladinShield is a **Runtime Enforcement Layer (REL)** — the MV3 extension is the Phase 1 proof surface; wallet-native embedding is the architectural destination (not a browser-extension product long term).
+PaladinShield is a **Runtime Enforcement Layer (REL)** licensed as **B2B infrastructure** — the MV3 extension is only the Phase 1 proof that Promise gating works in a hostile page; **wallet-native embedding** is where users get protection without installing another extension.
 
 * **RPC Guard:** JSON-RPC edge policy aligned with REL semantics (**planned** — not shipped).
 * **Embedded Policy SDK (`@paladinshield/rel-core`):** Same Promise-gate semantics for wallet hosts — documented for partners and technical reviewers who want depth beyond the extension. Details: [docs/SDK_ROADMAP.md](docs/SDK_ROADMAP.md) · [docs/WALLET_SDK_INTEGRATION.md](docs/WALLET_SDK_INTEGRATION.md).
@@ -181,7 +201,9 @@ See also: [docs/SDK_ROADMAP.md](docs/SDK_ROADMAP.md) · [docs/WALLET_LAB.md](doc
 
 2. **(Optional) Enable semantic analysis for local demos**
 
-   Copy `.env.example` to `.env`, set `OPENAI_API_KEY`, then sync into the extension (MV3 cannot read `.env` at runtime):
+   **Judges:** skip this step — Tier C lab paths and the hostile `signMessage` drill work with **local heuristics + fail-closed** only ([docs/REVIEWER_FAQ.md](docs/REVIEWER_FAQ.md)).
+
+   For Tier B semantic copy during development, copy `.env.example` to `.env`, set `OPENAI_API_KEY`, then sync (MV3 cannot read `.env` at runtime):
 
    ```bash
    cp .env.example .env
@@ -189,7 +211,7 @@ See also: [docs/SDK_ROADMAP.md](docs/SDK_ROADMAP.md) · [docs/WALLET_LAB.md](doc
    npm run env:sync
    ```
 
-   This writes `src/extension/scripts/openai-env.js` (gitignored). Without a key, REL uses local heuristics + fail-safe only. Do not commit real keys.
+   This writes `src/extension/scripts/openai-env.js` (gitignored). Without a key, REL uses local heuristics + fail-safe only. Do not commit real keys. Production wallets use a **backend proxy** — see [SECURITY_ROADMAP.md](SECURITY_ROADMAP.md).
 
 3. Open `chrome://extensions/`.
 
