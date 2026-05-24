@@ -145,6 +145,8 @@ npm run demo:browser
 npm run demo:wallet-lab
 ```
 
+Reproducibility for reviewers: **[docs/JUDGES_LAB_GUIDE.md](docs/JUDGES_LAB_GUIDE.md)** (MV3 extension lab + Integration Lab + PoC catalog E–L).
+
 See also: [docs/SDK_ROADMAP.md](docs/SDK_ROADMAP.md) · [docs/WALLET_LAB.md](docs/WALLET_LAB.md)
 
 ---
