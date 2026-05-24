@@ -24,12 +24,15 @@ PaladinShield is an infrastructure-grade, low-level browser containment layer de
 | `docs/ATTACK_SIMULATION_REPORT.md` | Reproducible PoE | Hostile `signMessage` and block outcome |
 | `docs/THREAT_MODEL.md` | Scope & limits | In-scope threats and explicit non-goals |
 | `docs/ROADMAP.md` | Design record | Tier A/B/C and Smart Path — **planned after Frontier review** (adoption; reduces friction without weakening Tier C) |
+| `docs/PALADIN_SECURITY_MANIFEST.md` | Lab attestation | Attacks **E–L** — verified runs, registry hashes, post-deadline patches **PF-01–03** |
 | `docs/colosseum/SUBMISSION_DEV_LOG.md` | Forensic justification | Enforcement thesis vs passive / simulation stacks |
 | `packages/rel-core/` | Optional depth | Wallet-embed REL scaffold + Integration Lab — **not required to score the extension** → [docs/SDK_ROADMAP.md](docs/SDK_ROADMAP.md) |
 
 **Do not run `npm install` at repo root to judge PaladinShield** — root `package.json` is tooling-only. The extension is the complete evaluation path.
 
 **Differentiation in one line:** simulation and alert UX **advise**; PaladinShield **holds the signing Promise** until an explicit approve path releases it.
+
+**REL 2.0 (local development):** The working tree includes a **Smart Path / Full REL** mode toggle, tier routing (A/B/C), and the extended industrial lab catalog (`scripts/lab/`, `docs/lab-verified/`). **GitHub’s judged baseline** remains the hackathon submission extension + manifest attestation; Smart Path is specified in [docs/ROADMAP.md](docs/ROADMAP.md) and **active in local REL 2.0** (e.g. Tier **A** fast path for aligned faucet mint; Tier **C** on hostile or incoherent requests).
 
 ---
 
@@ -116,7 +119,7 @@ PaladinShield is a **Runtime Enforcement Layer (REL)** — the MV3 extension is 
 
 * **RPC Guard:** JSON-RPC edge policy aligned with REL semantics (**planned** — not shipped).
 * **Embedded Policy SDK (`@paladinshield/rel-core`):** Same Promise-gate semantics for wallet hosts — documented for partners and technical reviewers who want depth beyond the extension. Details: [docs/SDK_ROADMAP.md](docs/SDK_ROADMAP.md) · [docs/WALLET_SDK_INTEGRATION.md](docs/WALLET_SDK_INTEGRATION.md).
-* **Policy tiers & Smart Path:** Studied and specified in [docs/ROADMAP.md](docs/ROADMAP.md) for post-review implementation (intent-coherent fast path + full shield on divergence).
+* **Policy tiers & Smart Path:** Specified in [docs/ROADMAP.md](docs/ROADMAP.md). **Judged submission:** Full REL baseline. **Local REL 2.0:** Smart Path prototype with tier A/B/C routing (popup toggle); lab-verified against [docs/PALADIN_SECURITY_MANIFEST.md](docs/PALADIN_SECURITY_MANIFEST.md) catalog **E–L**.
 * **Paladin Verified:** Reputation layer referenced in extension metadata; roadmap only.
 
 #### Optional repository depth (SDK & Integration Lab)

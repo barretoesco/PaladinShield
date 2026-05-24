@@ -78,6 +78,8 @@ This manifest does **not** claim on-chain or RPC-layer protection. It attests **
 
 **Lab PoC:** `scripts/lab/e-attack-poc.js` — use `signMessage(Uint8Array)`; PASS = caught rejection.
 
+**Verified run:** [`docs/lab-verified/ATTACK_E_VERIFIED_RESULT.md`](./lab-verified/ATTACK_E_VERIFIED_RESULT.md) — `POLICY_BLOCK` Tier C, live hash `0d9e9060…c15fc8`.
+
 ---
 
 ## Attack F — The Drainer DApp
@@ -93,6 +95,8 @@ This manifest does **not** claim on-chain or RPC-layer protection. It attests **
 
 **Lab PoC:** `scripts/lab/f-attack-poc.js` — canonical shape: `{ declaredIntent, payload: { instructions } }` passed to `signTransaction`.
 
+**Verified run:** [`docs/lab-verified/ATTACK_F_VERIFIED_RESULT.md`](./lab-verified/ATTACK_F_VERIFIED_RESULT.md) — `FRONTAL_DRAINER` Tier C, live hash `c7c12af1…ff1d`.
+
 ---
 
 ## Attack G — The Wallet-Drainer (Program-Level Hijack)
@@ -107,6 +111,8 @@ This manifest does **not** claim on-chain or RPC-layer protection. It attests **
 | **Validation hash (registry)** | `80d902c8793b70cbd0c27c18b052e53d4924e65f5562bb346f3743ca83a495c8` |
 
 **Lab PoC:** `scripts/lab/g-attack-poc.js` — multi-account writable fixture; verify `err.code` in console.
+
+**Verified run:** [`docs/lab-verified/ATTACK_G_VERIFIED_RESULT.md`](./lab-verified/ATTACK_G_VERIFIED_RESULT.md) — `FRONTAL_DRAINER` Tier C, live hash `e598da25…217df`.
 
 ---
 
@@ -125,7 +131,7 @@ This manifest does **not** claim on-chain or RPC-layer protection. It attests **
 
 **Verified hostile run:** [`docs/lab-verified/ATTACK_J_VERIFIED_RESULT.md`](./lab-verified/ATTACK_J_VERIFIED_RESULT.md) — `FRONTAL_DRAINER` Tier C, live hash `a37d2bb5…92b4f`.
 
-**Intent coherence (benign-context regression):** [`docs/lab-verified/ATTACK_J_INTENT_COHERENCE_BENIGN.md`](./lab-verified/ATTACK_J_INTENT_COHERENCE_BENIGN.md) — single-ix stake narrative on a faucet origin; Block with semantic explanation (utility site must not solicit staking; OperatorHelp for possible compromise). Documents shield behavior for doubtful cases, not a hostile-byte false positive.
+**Intent coherence (benign-context regression):** [`docs/lab-verified/ATTACK_J_INTENT_COHERENCE_BENIGN.md`](./lab-verified/ATTACK_J_INTENT_COHERENCE_BENIGN.md) — single-ix stake narrative on a faucet dApp; Block when the signing request is **outside expected dApp behavior** (semantic analysis + OperatorHelp). Internal lab note — not a hostile-byte PoC.
 
 ---
 
@@ -173,6 +179,22 @@ This manifest does **not** claim on-chain or RPC-layer protection. It attests **
 | **J** | Stealth Drainer | Hidden second instruction (transfer) | **C** | **BLOCKED / VERIFIED** | `8d07179d…` |
 | **K** | Faucet-Drainer | Faucet narrative + approve/delegate trap | **C** | **BLOCKED / VERIFIED** | `47fc5beb…` |
 | **L** | Identity Ghost | Benign narrative + delegate authority | **C** | **BLOCKED / VERIFIED** | `d1ea31a5…` |
+
+---
+
+## Verified lab runs (complete index)
+
+| Attack | Report | Verdict (live) | Notes |
+|--------|--------|----------------|-------|
+| **E** | [`ATTACK_E_VERIFIED_RESULT.md`](./lab-verified/ATTACK_E_VERIFIED_RESULT.md) | `POLICY_BLOCK` · Tier C | `signMessage` blind-signer |
+| **F** | [`ATTACK_F_VERIFIED_RESULT.md`](./lab-verified/ATTACK_F_VERIFIED_RESULT.md) | `FRONTAL_DRAINER` · Tier C | Claim + drainer program |
+| **G** | [`ATTACK_G_VERIFIED_RESULT.md`](./lab-verified/ATTACK_G_VERIFIED_RESULT.md) | `FRONTAL_DRAINER` · Tier C | Program-level hijack |
+| **J** (hostile) | [`ATTACK_J_VERIFIED_RESULT.md`](./lab-verified/ATTACK_J_VERIFIED_RESULT.md) | `FRONTAL_DRAINER` · Tier C | Stealth second ix — **PF-01** |
+| **J** (benign-context) | [`ATTACK_J_INTENT_COHERENCE_BENIGN.md`](./lab-verified/ATTACK_J_INTENT_COHERENCE_BENIGN.md) | Block · semantic | Expected dApp behavior regression — **PF-03** context |
+| **K** | [`ATTACK_K_VERIFIED_RESULT.md`](./lab-verified/ATTACK_K_VERIFIED_RESULT.md) | `POLICY_BLOCK` · Tier C | Faucet + hostile bytes |
+| **L** | [`ATTACK_L_VERIFIED_RESULT.md`](./lab-verified/ATTACK_L_VERIFIED_RESULT.md) | `POLICY_BLOCK` · Tier C | Delegate under benign narrative — **PF-02** |
+
+*Initial manifest commit (`935db05`) shipped E, J, J-benign, K, L reports; **F** and **G** verified reports and this index complete the attestation set locally.*
 
 ---
 
