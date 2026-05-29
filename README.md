@@ -38,6 +38,7 @@ The unpacked extension exists so anyone can **verify** Promise gating in five mi
 |------|--------|--------|
 | `src/extension/` | **Shipped — judge here** | Unpacked MV3 demo; Full REL gate (see [docs/ROADMAP.md](docs/ROADMAP.md) for post-review product tiers) |
 | [docs/REVIEWER_FAQ.md](docs/REVIEWER_FAQ.md) | **Start here for hard questions** | B2B thesis, OpenAI path, judge zero-key, race limits (short answers) |
+| [docs/JUDGE_AUDIT_DELTA.md](docs/JUDGE_AUDIT_DELTA.md) | **2026-05-28 audit delta** | Page-world bridge hardening — **local fix, GitHub frozen until audit ends** |
 | [docs/ENVIRONMENT_ISOLATION.md](docs/ENVIRONMENT_ISOLATION.md) | Injection guarantees | What `inject.js` does / does not claim vs advanced page attackers |
 | `docs/ATTACK_SIMULATION_REPORT.md` | Reproducible PoE | Hostile `signMessage` and block outcome |
 | `docs/THREAT_MODEL.md` | Scope & limits | In-scope threats and explicit non-goals |
@@ -53,6 +54,18 @@ The unpacked extension exists so anyone can **verify** Promise gating in five mi
 **Differentiation in one line:** simulation and alert UX **advise**; PaladinShield **holds the signing Promise** until an explicit approve path releases it.
 
 **REL 2.0 (local development):** The working tree includes a **Smart Path / Full REL** mode toggle, tier routing (A/B/C), and the extended industrial lab catalog (`scripts/lab/`, `docs/lab-verified/`). **GitHub’s judged baseline** remains the hackathon submission extension + manifest attestation; Smart Path is specified in [docs/ROADMAP.md](docs/ROADMAP.md) and **active in local REL 2.0** (e.g. Tier **A** fast path for aligned faucet mint; Tier **C** on hostile or incoherent requests).
+
+### 2026-05-28 — Page-world enforcement hardening (local v2; not yet on public GitHub)
+
+> **Audit transparency:** We identified residual weaknesses in the **background ↔ inject** decision bridge on the **judged GitHub snapshot** (global `window` handlers, Smart Path races, CSP-blocked inline bridges, prototype-poisoning risk in page world). **Fixes are implemented and lab-tested locally** (v0.1.5–v0.1.11); we are **not** pushing structural extension changes to GitHub until the **audit process completes**, so reviewers judge a stable artifact. Full problem statement, coverage honesty, and Gemini-aligned checklist → **[docs/JUDGE_AUDIT_DELTA.md](docs/JUDGE_AUDIT_DELTA.md)**.
+
+| What changed (local) | What it does **not** claim |
+|----------------------|----------------------------|
+| CSP-safe decision via `scripting.executeScript` (MAIN world) | New on-chain drain signature rules |
+| No global `window` decision APIs; atomic Smart Path `resolve` | iframe / clean-realm bypass coverage |
+| Early page preamble + `safeAwait` + defensive arg isolation | Wallet-native REL (Phase 3) |
+
+**Coverage in one line:** Same Tier **C** / lab catalog **E–L**; **more reliable** pre-sign Promise gating on `window.solana`.
 
 ---
 

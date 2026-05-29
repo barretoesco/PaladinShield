@@ -2,6 +2,8 @@
 
 PaladinShield submitted to Colosseum on **May 11**. This update closes two enforcement gaps identified in internal red-team review **after submission**, aligned with judge feedback to keep iterating on infrastructure projects.
 
+> **Update (2026-05-28):** Further **background ↔ inject** page-world bridge hardening (CSP-safe decision delivery, no global `window` handlers, atomic Smart Path `resolve`, preamble + `safeAwait`) is documented in **[JUDGE_AUDIT_DELTA.md](./JUDGE_AUDIT_DELTA.md)**. That work is **implemented and lab-tested locally** but **not yet on the public GitHub snapshot** until the audit process completes — see the delta for judged baseline vs local v2.
+
 ## 1. Decision channel anti-spoofing
 
 **Problem:** Inbound approve/block signals were delivered to `inject.js` via `window.postMessage`. Any same-origin page script could observe `SIGNATURE_INTENT` traffic and forge a `SIGNATURE_DECISION` with `approve`.
@@ -49,3 +51,5 @@ window.postMessage(
 ## Scope honesty
 
 This hardening strengthens **browser REL** for the standard `window.solana` surface. It does not claim coverage for mobile deep links, Wallet Standard-only flows, `signAndSendTransaction`, or RPC-level enforcement (Phase 3 roadmap).
+
+For the **2026-05-28** bridge evolution (what GitHub shows today vs what is fixed locally), see **[JUDGE_AUDIT_DELTA.md](./JUDGE_AUDIT_DELTA.md)**.

@@ -1,7 +1,7 @@
 # Reviewer & judge FAQ
 
-**Last updated:** 2026-05-22  
-Short answers for technical reviewers, hackathon judges, and wallet partners. Full depth: [THREAT_MODEL.md](./THREAT_MODEL.md) · [ENVIRONMENT_ISOLATION.md](./ENVIRONMENT_ISOLATION.md) · [SECURITY_ROADMAP.md](../SECURITY_ROADMAP.md).
+**Last updated:** 2026-05-28  
+Short answers for technical reviewers, hackathon judges, and wallet partners. Full depth: [THREAT_MODEL.md](./THREAT_MODEL.md) · [ENVIRONMENT_ISOLATION.md](./ENVIRONMENT_ISOLATION.md) · [JUDGE_AUDIT_DELTA.md](./JUDGE_AUDIT_DELTA.md) · [SECURITY_ROADMAP.md](../SECURITY_ROADMAP.md).
 
 ---
 
@@ -62,6 +62,22 @@ Current OpenAI request timeout: **8 seconds** (`OPENAI_REQUEST_TIMEOUT_MS` in `t
 
 ---
 
+## What is on public GitHub vs local development?
+
+**The judged hackathon snapshot on GitHub** is intentionally **frozen** during audit so reviewers see a stable artifact.
+
+| Surface | GitHub (judged baseline) | Local working tree |
+|---------|--------------------------|-------------------|
+| Tier **C** / lab **E–L** policy | ✅ Documented & attested | ✅ Same catalog + lab scripts |
+| Decision bridge (`background` ↔ `inject`) | Token anti-spoof via `window` bridge handlers (see [POST_SUBMIT_SECURITY_HARDENING.md](./POST_SUBMIT_SECURITY_HARDENING.md) §1) | **v0.1.5–v0.1.11** hardening: CSP-safe `executeScript` delivery, no global handlers, atomic Smart Path `resolve` |
+| Structural extension push | Frozen until audit ends | Fixes **already implemented and lab-tested** |
+
+Full problem statement, coverage honesty, and Gemini-aligned checklist → **[JUDGE_AUDIT_DELTA.md](./JUDGE_AUDIT_DELTA.md)** · [README](../README.md) (section *2026-05-28 — Page-world enforcement hardening*).
+
+We are **aware** of residual page-world bridge weaknesses in the GitHub snapshot and **have corrected them locally**; we will **commit after audit** completes.
+
+---
+
 ## What ships vs. what is roadmap?
 
 | Shipped (judge here) | Documented / pilot |
@@ -85,5 +101,7 @@ Current OpenAI request timeout: **8 seconds** (`OPENAI_REQUEST_TIMEOUT_MS` in `t
 ## Related
 
 - [README.md](../README.md) — commercial thesis & installation  
+- [JUDGE_AUDIT_DELTA.md](./JUDGE_AUDIT_DELTA.md) — **2026-05-28** page-world bridge delta (GitHub frozen vs local v2)  
+- [POST_SUBMIT_SECURITY_HARDENING.md](./POST_SUBMIT_SECURITY_HARDENING.md) — May 2026 post-submit fixes (token gate, default-deny)  
 - [PALADIN_SECURITY_MANIFEST.md](./PALADIN_SECURITY_MANIFEST.md) — verified attack registry  
 - [colosseum/SUBMISSION_DEV_LOG.md](./colosseum/SUBMISSION_DEV_LOG.md) — enforcement vs simulation thesis  
